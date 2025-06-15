@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'registar_aluno.dart';
+import 'Registar_utilizador.dart';
 
 class PainelRecepcionista extends StatelessWidget {
   const PainelRecepcionista({super.key});
@@ -49,7 +49,7 @@ class PainelRecepcionista extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const RegistarAluno()),
+                      MaterialPageRoute(builder: (_) => const RegistarUtilizador()),
                     );
                   },
                   icon: const Icon(Icons.person_add),

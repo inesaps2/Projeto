@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class RegistarAluno extends StatefulWidget {
-  const RegistarAluno({super.key});
+class RegistarUtilizador extends StatefulWidget {
+  const RegistarUtilizador({super.key});
 
   @override
-  State<RegistarAluno> createState() => _RegistarAlunoState();
+  State<RegistarUtilizador> createState() => _RegistarUtilizadorState();
 }
 
-class _RegistarAlunoState extends State<RegistarAluno> {
+class _RegistarUtilizadorState extends State<RegistarUtilizador> {
   bool showRegisterAlunoFields = false;
   bool showRegisterInstrutorFields = false;
 
@@ -28,6 +28,7 @@ class _RegistarAlunoState extends State<RegistarAluno> {
   // Instrutor controllers
   final TextEditingController nomeInstrutorController = TextEditingController();
   final TextEditingController emailInstrutorController = TextEditingController();
+  final TextEditingController passwordInstrutorController = TextEditingController();
 
   @override
   void dispose() {
@@ -36,6 +37,7 @@ class _RegistarAlunoState extends State<RegistarAluno> {
     passwordAlunoController.dispose();
     nomeInstrutorController.dispose();
     emailInstrutorController.dispose();
+    passwordInstrutorController.dispose();
     super.dispose();
   }
 
@@ -81,11 +83,40 @@ class _RegistarAlunoState extends State<RegistarAluno> {
   }
 
 
-  void registrarInstrutor() {
+  void registrarInstrutor() async {
     if (_formKeyInstrutor.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Instrutor registado com sucesso!')),
+      final url = Uri.parse('http://localhost:3000/api/auth/register');
+
+      print('--- A ENVIAR DADOS (Instrutor) ---');
+      print('Nome: ${nomeInstrutorController.text}');
+      print('Email: ${emailInstrutorController.text}');
+      print('Password: default123');
+      print('id_type: 2');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'nome': nomeInstrutorController.text,
+          'email': emailInstrutorController.text,
+          'password': passwordInstrutorController.text,
+          'id_type': 2
+        }),
       );
+
+      print('--- RESPOSTA DO SERVIDOR ---');
+      print('Status code: ${response.statusCode}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Instrutor registado com sucesso!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: ${jsonDecode(response.body)['error']}')),
+        );
+      }
     }
   }
 
@@ -351,6 +382,25 @@ class _RegistarAlunoState extends State<RegistarAluno> {
                         },
                       ),
                       const SizedBox(height: 20),
+
+                      const Text('Password'),
+                      TextFormField(
+                        controller: passwordInstrutorController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '*Campo obrigatório';
+                          }
+                          if (value.trim().length < 6) {
+                            return 'A password deve ter pelo menos 6 caracteres';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
 
                       Center(
                         child: ElevatedButton(
