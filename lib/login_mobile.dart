@@ -28,18 +28,28 @@ class _LoginMobileState extends State<LoginMobile> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        final user = data['user'];
+        final int idType = user['id_type'];
+
+        if (idType == 3) {
+          // Bloqueia recepcionista
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Recepcionistas não têm acesso à aplicação móvel.")),
+          );
+          return;
+        }
 
         // Guarda os dados em sessão
-        Session.email = data['user']['email'];
+        Session.email = user['email'];
         Session.password = password;
-        Session.nome = data['user']['name'];
-        Session.categoria = data['user']['categoria'];
-        Session.instrutor = data['user']['instrutor'];
-        Session.veiculo = data['user']['veiculo'];
-        Session.aulas = data['user']['aulas'];
-        Session.primeiroLogin = data['user']['primeiro_login'];
+        Session.nome = user['name'];
+        Session.categoria = user['categoria'];
+        Session.instrutor = user['instrutor'];
+        Session.veiculo = user['veiculo'];
+        Session.aulas = user['aulas'];
+        Session.primeiroLogin = user['primeiro_login'];
 
-        print("✅ Login com sucesso: ${data['user']['name']}");
+        print("✅ Login com sucesso: ${user['name']}");
         print("🟡 primeiro_login = ${Session.primeiroLogin}");
 
         Navigator.pushReplacement(
