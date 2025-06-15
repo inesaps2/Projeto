@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'Registar_utilizador.dart';
+import 'registar_utilizador.dart';
 
 class PainelRecepcionista extends StatelessWidget {
   const PainelRecepcionista({super.key});

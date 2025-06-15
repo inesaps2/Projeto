@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:projeto/PaginaInicial.dart';
+import 'package:projeto/pagina_inicial.dart';
+import 'package:projeto/teste.dart';
 
 class LoginMobile extends StatefulWidget {
   const LoginMobile({super.key});
@@ -16,7 +17,7 @@ class _LoginMobileState extends State<LoginMobile> {
   final _passwordController = TextEditingController();
 
   Future<void> login(String email, String password) async {
-    final uri = Uri.parse("http://10.0.2.2:3000/api/auth/login"); // ou substitui por IP real se estiver em dispositivo físico
+    final uri = Uri.parse("http://10.0.2.2:3000/api/auth/login");
 
     try {
       final response = await http.post(
@@ -27,7 +28,19 @@ class _LoginMobileState extends State<LoginMobile> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
+        // Guarda os dados em sessão
+        Session.email = data['user']['email'];
+        Session.password = password;
+        Session.nome = data['user']['name'];
+        Session.categoria = data['user']['categoria'];
+        Session.instrutor = data['user']['instrutor'];
+        Session.veiculo = data['user']['veiculo'];
+        Session.aulas = data['user']['aulas'];
+        Session.primeiroLogin = data['user']['primeiro_login'];
+
         print("✅ Login com sucesso: ${data['user']['name']}");
+        print("🟡 primeiro_login = ${Session.primeiroLogin}");
 
         Navigator.pushReplacement(
           context,
@@ -67,7 +80,7 @@ class _LoginMobileState extends State<LoginMobile> {
               ),
               const SizedBox(height: 20),
 
-              // Campo de Email
+              // Email
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(
@@ -89,7 +102,7 @@ class _LoginMobileState extends State<LoginMobile> {
               ),
               const SizedBox(height: 20),
 
-              // Campo de Password
+              // Password
               TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(
@@ -111,7 +124,7 @@ class _LoginMobileState extends State<LoginMobile> {
               ),
               const SizedBox(height: 30),
 
-              // Botão de Login
+              // Botão Login
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {

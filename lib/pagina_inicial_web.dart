@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'login_web.dart';
-import 'Registar_Recepcionista.dart';
+import 'registar_recepcionista.dart';
 
 class PaginaInicialWeb extends StatelessWidget {
   const PaginaInicialWeb({super.key});

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:projeto/Calendario.dart';
-import 'package:projeto/PaginaInicial.dart';
-import 'package:projeto/Perfil.dart';
+import 'package:projeto/calendario.dart';
+import 'package:projeto/pagina_inicial.dart';
+import 'package:projeto/perfil.dart';
 import 'package:projeto/main.dart';
 
 class PaginaInicial extends StatelessWidget {

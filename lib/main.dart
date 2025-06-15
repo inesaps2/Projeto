@@ -1,11 +1,11 @@
+import 'package:flutter/foundation.dart'; // Para detectar se é web
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:projeto/login_web.dart';
 
+import 'pagina_inicial_web.dart';
 import 'login_selector.dart';
 import 'login_recepcionista.dart';
 import 'painel_recepcionista.dart';
-import 'PaginaInicial_web.dart';
 
 void main() {
   runApp(const MyApp());
@@ -39,12 +39,13 @@ class MyApp extends StatelessWidget {
 
       title: 'App com Calendário',
 
-      // Página inicial alterada
-      home: const PaginaInicialWeb(),
+      // Página inicial condicional
+      home: kIsWeb ? const PaginaInicialWeb(): const LoginSelector(),
 
       // Rotas
       routes: {
         '/painelRecepcionista': (context) => PainelRecepcionista(),
+        '/loginRecepcionista': (context) => LoginRecepcionista(),
       },
     );
   }
