@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'login_web.dart';
+import 'Registar_Recepcionista.dart';
 
 class PaginaInicialWeb extends StatelessWidget {
   const PaginaInicialWeb({super.key});
@@ -35,9 +36,9 @@ class PaginaInicialWeb extends StatelessWidget {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // Aqui podes redirecionar para uma página de registo se quiseres
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Página de registo ainda não criada.')),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegistarRecepcionista()),
                   );
                 },
                 child: const Text('Registar'),
