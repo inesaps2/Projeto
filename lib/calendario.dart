@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:projeto/teste.dart';
+import 'dart:convert';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:projeto/main.dart';
 import 'package:projeto/pagina_inicial.dart';
 import 'package:projeto/perfil.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 class Calendario extends StatefulWidget {
   const Calendario({super.key});
@@ -14,21 +17,83 @@ class Calendario extends StatefulWidget {
 class _CalendarioState extends State<Calendario> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  int _indiceSelecionado = 0;
-
-  // Lista dos dias da semana em português
-  final List<String> _weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  Map<DateTime, List<int>> _eventos = {};
 
   @override
   void initState() {
     super.initState();
-    _selectedDay = _focusedDay; // Inicializa o dia selecionado com a data atual
+    _selectedDay = _focusedDay;
+    _carregarAulasMarcadas();
+  }
 
-    void _navegar(int index) {
+  Future<void> _carregarAulasMarcadas() async {
+    final uri = Uri.parse('http://10.0.2.2:3000/api/aulas?email=${Session.email}');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      final Map<DateTime, List<int>> novosEventos = {};
+
+      for (var aula in data) {
+        final dt = DateTime.parse(aula['data_hora']);
+        final key = DateTime(dt.year, dt.month, dt.day);
+        novosEventos.putIfAbsent(key, () => []).add(dt.hour);
+      }
+
       setState(() {
-        _indiceSelecionado = index;
+        _eventos = novosEventos;
       });
     }
+  }
+
+  void _mostrarDialogoMarcarAula(int horaSelecionada) {
+    final nomeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Marcar Aula'),
+          content: TextField(
+            controller: nomeController,
+            decoration: const InputDecoration(labelText: 'Nome'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                final nome = nomeController.text.trim();
+                if (nome.isEmpty) return;
+
+                final uri = Uri.parse('http://10.0.2.2:3000/api/aulas');
+                final resp = await http.post(
+                  uri,
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode({
+                    'email': Session.email,
+                    'nomeAluno': nome,
+                    'data': _selectedDay!.toIso8601String().split('T')[0],
+                    'hora': horaSelecionada.toString(),
+                  }),
+                );
+
+                Navigator.pop(context);
+                if (resp.statusCode == 201) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Aula marcada com sucesso!")),
+                  );
+                  _carregarAulasMarcadas();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Erro ao marcar aula.")),
+                  );
+                }
+              },
+              child: const Text('Confirmar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -41,19 +106,22 @@ class _CalendarioState extends State<Calendario> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Logo alinhado à esquerda
               Row(
-                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Image.asset(
                     'assets/GO_DRIVING Logotipo FINAL.png',
                     width: 150,
                     height: 50,
                   ),
+                  ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
+                    child: const Text('Marcar Aula'),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
-              // Calendário
               TableCalendar(
                 firstDay: DateTime.utc(2020, 1, 1),
                 lastDay: DateTime.utc(2030, 12, 31),
@@ -66,113 +134,88 @@ class _CalendarioState extends State<Calendario> {
                   });
                 },
                 locale: 'pt_PT',
-                daysOfWeekStyle: DaysOfWeekStyle(
-                  dowTextFormatter: (date, locale) {
-                    return _weekdays[date.weekday % 7];
+                eventLoader: (day) => _eventos[DateTime(day.year, day.month, day.day)] ?? [],
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, day, events) {
+                    if (events.isNotEmpty) {
+                      return Positioned(
+                        bottom: 1,
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      );
+                    }
+                    return null;
                   },
                 ),
-                headerStyle: HeaderStyle(
+                headerStyle: const HeaderStyle(
                   formatButtonVisible: false,
                   titleCentered: true,
                 ),
                 calendarFormat: CalendarFormat.week,
                 calendarStyle: CalendarStyle(
-                  selectedDecoration: BoxDecoration(
-                    color: const Color(0xFF16ADC2), // Cor do círculo do dia selecionado
+                  selectedDecoration: const BoxDecoration(
+                    color: Color(0xFF16ADC2),
                     shape: BoxShape.circle,
                   ),
                   todayDecoration: BoxDecoration(
                     color: Colors.grey[400],
                     shape: BoxShape.circle,
                   ),
-                  selectedTextStyle: const TextStyle(
-                    color: Colors.white,
-                  ),
+                  selectedTextStyle: const TextStyle(color: Colors.white),
                 ),
               ),
               const SizedBox(height: 16),
-              // Texto com data selecionada
               if (_selectedDay != null)
                 Text(
-                  '${_selectedDay!.day} de ${_getMonthName(_selectedDay!.month)} - ${_getDayOfWeekName(_selectedDay!)}',
+                  '${_selectedDay!.day}/${_selectedDay!.month}/${_selectedDay!.year}',
                   style: const TextStyle(fontSize: 18),
                 ),
               const SizedBox(height: 16),
-              // Lista de horários com divisores
               ListView.separated(
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(), // Scroll vem do SingleChildScrollView
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: 11,
                 separatorBuilder: (context, index) => const Divider(),
                 itemBuilder: (context, index) {
-                  final hour = 9 + index;
-                  return Text('$hour:00', style: const TextStyle(fontSize: 16));
+                  final hora = 9 + index;
+                  return ListTile(
+                    title: Text('$hora:00'),
+                    trailing: ElevatedButton(
+                      onPressed: () => _mostrarDialogoMarcarAula(hora),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
+                      child: const Text('Marcar'),
+                    ),
+                  );
                 },
               ),
             ],
           ),
         ),
       ),
-
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF16ADC2),
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
-        currentIndex: 1, // ← Calendário está selecionado
-        onTap: (int index) {
+        currentIndex: 1,
+        onTap: (index) {
           if (index == 0) {
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PaginaInicial()));
-          } else if (index == 1) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Calendario()));
           } else if (index == 2) {
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Perfil()));
           }
         },
         items: [
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(icon: Icons.home, index: 0, currentIndex: 1),
-            label: 'Início',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(icon: Icons.calendar_month_outlined, index: 1, currentIndex: 1),
-            label: 'Calendário',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(icon: Icons.person, index: 2, currentIndex: 1),
-            label: 'Perfil',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_month_outlined), label: 'Calendário'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
     );
-  }
-
-  Widget _buildNavIcon({required IconData icon, required int index, required int currentIndex}) {
-    final bool isSelected = index == currentIndex;
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.white24 : Colors.transparent,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon),
-    );
-  }
-
-  // Função para retornar o nome do mês em português
-  String _getMonthName(int month) {
-    const months = [
-      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-    return months[month - 1];
-  }
-
-  // Função para retornar o nome do dia da semana em português
-  String _getDayOfWeekName(DateTime date) {
-    const days = [
-      'Domingo', 'Segunda', 'Terça', 'Quarta',
-      'Quinta', 'Sexta', 'Sábado'
-    ];
-    return days[date.weekday % 7];
   }
 }
