@@ -8,81 +8,101 @@ import 'package:projeto/pagina_inicial.dart';
 import 'package:projeto/perfil.dart';
 
 class Calendario extends StatefulWidget {
-  const Calendario({Key? key}) : super(key: key);
+  const Calendario({super.key});
 
   @override
-  _CalendarioState createState() => _CalendarioState();
+  State<Calendario> createState() => _CalendarioState();
 }
 
 class _CalendarioState extends State<Calendario> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  List<String> _horarios = ['9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19'];
-  String _instrutorSelecionado = 'João';
-
-  final List<String> _instrutores = ['João', 'Ana', 'Carlos', 'Sofia'];
-  final List<String> _weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  Map<DateTime, Map<int, String>> _eventos = {};
 
   @override
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
+    _carregarAulasMarcadas();
   }
 
-  void _marcarAula(BuildContext context) {
+  Future<void> _carregarAulasMarcadas() async {
+    final uri = Uri.parse('http://10.0.2.2:3000/api/aulas?email=${Session.email}');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      print('Dados recebidos: $data');
+      final Map<DateTime, Map<int, String>> novosEventos = {};
+
+      for (var aula in data) {
+        final dt = DateTime.parse(aula['data_hora']);
+        final key = DateTime(dt.year, dt.month, dt.day);
+        final hora = dt.hour;
+        final nome = aula['nome_aluno'] ?? '';
+
+        if (!novosEventos.containsKey(key)) {
+          novosEventos[key] = {};
+        }
+        novosEventos[key]![hora] = nome;
+      }
+
+      print('Eventos carregados:');
+      novosEventos.forEach((key, value) {
+        print('$key -> $value');
+      });
+
+      setState(() {
+        _eventos = novosEventos;
+      });
+    } else {
+      print('Erro ao carregar aulas: ${response.statusCode}');
+    }
+  }
+
+
+  void _mostrarDialogoMarcarAula(int horaSelecionada) {
+    final nomeController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) {
-        String nomeAluno = '';
-        String? horaSelecionada;
-
         return AlertDialog(
           title: const Text('Marcar Aula'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: 'Nome do Aluno'),
-                onChanged: (value) {
-                  nomeAluno = value;
-                },
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Hora'),
-                items: _horarios.map((hora) {
-                  return DropdownMenuItem(
-                    value: hora,
-                    child: Text('$hora:00'),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  horaSelecionada = value;
-                },
-              ),
-            ],
+          content: TextField(
+            controller: nomeController,
+            decoration: const InputDecoration(labelText: 'Nome'),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (nomeAluno.isNotEmpty && horaSelecionada != null) {
-                  final data = _selectedDay?.toIso8601String().split('T').first;
-                  final instrutor = _instrutorSelecionado;
+              onPressed: () async {
+                final nome = nomeController.text.trim();
+                if (nome.isEmpty) return;
 
-                  // Aqui podes fazer a chamada à API
-                  print('📅 Aula marcada: Aluno: $nomeAluno, Data: $data, Hora: $horaSelecionada, Instrutor: $instrutor');
+                final uri = Uri.parse('http://10.0.2.2:3000/api/aulas');
+                final resp = await http.post(
+                  uri,
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode({
+                    'email': Session.email,
+                    'nomeAluno': nome,
+                    'data': _selectedDay!.toIso8601String().split('T')[0],
+                    'hora': horaSelecionada.toString(),
+                  }),
+                );
 
-                  Navigator.pop(context);
+                Navigator.pop(context);
+                if (resp.statusCode == 201) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Aula marcada com sucesso!')),
+                    const SnackBar(content: Text("Aula marcada com sucesso!")),
+                  );
+                  _carregarAulasMarcadas();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Erro ao marcar aula.")),
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
               child: const Text('Confirmar'),
             ),
           ],
@@ -91,153 +111,178 @@ class _CalendarioState extends State<Calendario> {
     );
   }
 
-  String _getMonthName(int month) {
-    const months = [
-      '', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-    return months[month];
-  }
-
-  String _getDayOfWeekName(DateTime date) {
-    const days = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-    return days[date.weekday % 7];
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Aulas')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Logotipo
-            Row(
-              children: [
-                Image.asset(
-                  'assets/GO_DRIVING Logotipo FINAL.png',
-                  width: 150,
-                  height: 50,
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Linha com dropdown + botão
-            // Linha com dropdown + botão com margem e título
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Row(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Coluna com texto e dropdown
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Instrutor:',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _instrutorSelecionado,
-                            items: _instrutores.map((instrutor) {
-                              return DropdownMenuItem<String>(
-                                value: instrutor,
-                                child: Text(instrutor),
-                              );
-                            }).toList(),
-                            onChanged: (novoInstrutor) {
-                              setState(() {
-                                _instrutorSelecionado = novoInstrutor!;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
+                  Image.asset(
+                    'assets/GO_DRIVING Logotipo FINAL.png',
+                    width: 150,
+                    height: 50,
                   ),
-
-                  // Botão Marcar Aula à direita
                   ElevatedButton(
-                    onPressed: () => _marcarAula(context),
+                    onPressed: () {
+                      final nomeController = TextEditingController();
+                      int horaSelecionada = 9;
+
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text('Marcar Aula'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextField(
+                                  controller: nomeController,
+                                  decoration: const InputDecoration(labelText: 'Nome'),
+                                ),
+                                const SizedBox(height: 16),
+                                DropdownButtonFormField<int>(
+                                  value: horaSelecionada,
+                                  decoration: const InputDecoration(labelText: 'Hora'),
+                                  items: List.generate(11, (index) => 9 + index).map((hora) {
+                                    return DropdownMenuItem<int>(
+                                      value: hora,
+                                      child: Text('$hora:00'),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    horaSelecionada = value!;
+                                  },
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () async {
+                                  final nome = nomeController.text.trim();
+                                  if (nome.isEmpty) return;
+
+                                  final uri = Uri.parse('http://10.0.2.2:3000/api/aulas');
+                                  final resp = await http.post(
+                                    uri,
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: jsonEncode({
+                                      'email': Session.email,
+                                      'nomeAluno': nome,
+                                      'data': _selectedDay!.toIso8601String().split('T')[0],
+                                      'hora': horaSelecionada.toString(),
+                                    }),
+                                  );
+
+                                  Navigator.pop(context);
+                                  if (resp.statusCode == 201) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text("Aula marcada com sucesso!")),
+                                    );
+                                    _carregarAulasMarcadas();
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text("Erro ao marcar aula.")),
+                                    );
+                                  }
+                                },
+                                child: const Text('Confirmar'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
                     child: const Text('Marcar Aula'),
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Calendário
-            TableCalendar(
-              firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
-              focusedDay: _focusedDay,
-              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              onDaySelected: (selectedDay, focusedDay) {
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-              },
-              locale: 'pt_PT',
-              daysOfWeekStyle: DaysOfWeekStyle(
-                dowTextFormatter: (date, locale) => _weekdays[date.weekday % 7],
-              ),
-              headerStyle: const HeaderStyle(
-                formatButtonVisible: false,
-                titleCentered: true,
-              ),
-              calendarFormat: CalendarFormat.week,
-              calendarStyle: CalendarStyle(
-                selectedDecoration: const BoxDecoration(
-                  color: Color(0xFF16ADC2),
-                  shape: BoxShape.circle,
+              const SizedBox(height: 20),
+              TableCalendar(
+                firstDay: DateTime.utc(2020, 1, 1),
+                lastDay: DateTime.utc(2030, 12, 31),
+                focusedDay: _focusedDay,
+                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                },
+                locale: 'pt_PT',
+                eventLoader: (day) {
+                  final dia = DateTime(day.year, day.month, day.day);
+                  return _eventos.containsKey(dia) ? [1] : [];
+                },
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, day, events) {
+                    if (events.isNotEmpty) {
+                      return Positioned(
+                        bottom: 1,
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      );
+                    }
+                    return null;
+                  },
                 ),
-                todayDecoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  shape: BoxShape.circle,
+                headerStyle: const HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
                 ),
-                selectedTextStyle: const TextStyle(color: Colors.white),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Dia selecionado
-            if (_selectedDay != null)
-              Text(
-                '${_selectedDay!.day} de ${_getMonthName(_selectedDay!.month)} - ${_getDayOfWeekName(_selectedDay!)}',
-                style: const TextStyle(fontSize: 18),
-              ),
-
-            const SizedBox(height: 16),
-
-            // Lista de horários disponíveis
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _horarios.length,
-              itemBuilder: (context, index) {
-                final hora = _horarios[index];
-                return Card(
-                  child: ListTile(
-                    title: Text('$hora:00'),
+                calendarFormat: CalendarFormat.week,
+                calendarStyle: CalendarStyle(
+                  selectedDecoration: const BoxDecoration(
+                    color: Color(0xFF16ADC2),
+                    shape: BoxShape.circle,
                   ),
-                );
-              },
-            ),
-          ],
+                  todayDecoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    shape: BoxShape.circle,
+                  ),
+                  selectedTextStyle: const TextStyle(color: Colors.white),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (_selectedDay != null)
+                Text(
+                  '${_selectedDay!.day}/${_selectedDay!.month}/${_selectedDay!.year}',
+                  style: const TextStyle(fontSize: 18),
+                ),
+              const SizedBox(height: 16),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 11,
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  final hora = 9 + index;
+                  final dia = DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
+                  final eventosDoDia = _eventos[dia] ?? {};
+                  final nomeAluno = eventosDoDia[hora];
+                  print('Dia: $dia, Hora: $hora, Nome: $nomeAluno');
+
+                  return ListTile(
+                    title: Text('$hora:00'),
+                    subtitle: nomeAluno != null ? Text('Marcado por: $nomeAluno') : null,
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
