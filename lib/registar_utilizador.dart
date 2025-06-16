@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'calendario_web.dart';
 
 class RegistarUtilizador extends StatefulWidget {
   const RegistarUtilizador({super.key});
@@ -12,6 +13,7 @@ class RegistarUtilizador extends StatefulWidget {
 class _RegistarUtilizadorState extends State<RegistarUtilizador> {
   bool showRegisterAlunoFields = false;
   bool showRegisterInstrutorFields = false;
+  bool showCalendar = false; // nova variável para o calendário
 
   final _formKeyAluno = GlobalKey<FormState>();
   final _formKeyInstrutor = GlobalKey<FormState>();
@@ -23,7 +25,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
   String? categoriaSelecionada;
   String? instrutorSelecionado;
   final List<String> categorias = ['A', 'B', 'C', 'D'];
-  final List<String> instrutores = ['Pedro 1', 'Pedro 2', 'António', 'Sérgio'];
+  List<String> instrutoresExistentes = [];
 
   // Instrutor controllers
   final TextEditingController nomeInstrutorController = TextEditingController();
@@ -39,6 +41,12 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
     emailInstrutorController.dispose();
     passwordInstrutorController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchInstrutores();
   }
 
   void registrarAluno() async {
@@ -57,12 +65,12 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'nome': nomeAlunoController.text,
+          'name': nomeAlunoController.text,
           'email': emailAlunoController.text,
           'password': passwordAlunoController.text,
           'category': categoriaSelecionada,
           'instrutor': instrutorSelecionado,
-          'id_type': 1,  // id_type fixo para aluno
+          'id_type': 1, // id_type fixo para aluno
         }),
       );
 
@@ -76,12 +84,12 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: ${jsonDecode(response.body)['error']}')),
+          SnackBar(
+              content: Text('Erro: ${jsonDecode(response.body)['error']}')),
         );
       }
     }
   }
-
 
   void registrarInstrutor() async {
     if (_formKeyInstrutor.currentState!.validate()) {
@@ -97,7 +105,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'nome': nomeInstrutorController.text,
+          'name': nomeInstrutorController.text,
           'email': emailInstrutorController.text,
           'password': passwordInstrutorController.text,
           'id_type': 2
@@ -112,13 +120,33 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Instrutor registado com sucesso!')),
         );
+        fetchInstrutores();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: ${jsonDecode(response.body)['error']}')),
+          SnackBar(
+              content: Text('Erro: ${jsonDecode(response.body)['error']}')),
         );
       }
     }
   }
+
+  void fetchInstrutores() async {
+    final url = Uri.parse('http://localhost:3000/api/instrutores');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          instrutoresExistentes = data.map((item) => item['name'] as String).toList();
+        });
+      } else {
+        print('Erro ao buscar instrutores: ${response.body}');
+      }
+    } catch (e) {
+      print('Erro ao conectar ao servidor: $e');
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +184,10 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
-                      // Navegar Calendário
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CalendarioWeb()),
+                      );
                     },
                     icon: const Icon(Icons.calendar_today),
                     label: const Text('Calendário'),
@@ -172,6 +203,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                       setState(() {
                         showRegisterAlunoFields = true;
                         showRegisterInstrutorFields = false;
+                        showCalendar = false;
                       });
                     },
                     icon: const Icon(Icons.person_add),
@@ -188,6 +220,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                       setState(() {
                         showRegisterInstrutorFields = true;
                         showRegisterAlunoFields = false;
+                        showCalendar = false;
                       });
                     },
                     icon: const Icon(Icons.person),
@@ -222,7 +255,9 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
+                          if (value == null || value
+                              .trim()
+                              .isEmpty) {
                             return '*Campo obrigatório';
                           }
                           return null;
@@ -238,7 +273,9 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
+                          if (value == null || value
+                              .trim()
+                              .isEmpty) {
                             return '*Campo obrigatório';
                           }
                           final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
@@ -258,10 +295,14 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
+                          if (value == null || value
+                              .trim()
+                              .isEmpty) {
                             return '*Campo obrigatório';
                           }
-                          if (value.trim().length < 6) {
+                          if (value
+                              .trim()
+                              .length < 6) {
                             return 'A password deve ter pelo menos 6 caracteres';
                           }
                           return null;
@@ -275,10 +316,11 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                           border: OutlineInputBorder(),
                         ),
                         items: categorias
-                            .map((cat) => DropdownMenuItem(
-                          value: cat,
-                          child: Text(cat),
-                        ))
+                            .map((cat) =>
+                            DropdownMenuItem(
+                              value: cat,
+                              child: Text(cat),
+                            ))
                             .toList(),
                         onChanged: (val) {
                           setState(() {
@@ -295,44 +337,42 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                       const SizedBox(height: 12),
 
                       const Text('Instrutor'),
-                      DropdownButtonFormField<String>(
-                        value: instrutorSelecionado,
+                      TextFormField(
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                         ),
-                        items: instrutores
-                            .map((ins) => DropdownMenuItem(
-                          value: ins,
-                          child: Text(ins),
-                        ))
-                            .toList(),
                         onChanged: (val) {
-                          setState(() {
-                            instrutorSelecionado = val;
-                          });
+                          instrutorSelecionado = val;
                         },
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
+                          if (value == null || value.trim().isEmpty) {
                             return '*Campo obrigatório';
                           }
                           return null;
                         },
                       ),
-
                       const SizedBox(height: 20),
 
                       Center(
                         child: ElevatedButton(
                           onPressed: registrarAluno,
-                          child: const Text('Registar Aluno'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF16ADC2),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 50, vertical: 15),
+                                horizontal: 40, vertical: 16),
                           ),
+                          child: const Text('Registar Aluno'),
                         ),
                       ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Instrutores registados:',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      ...instrutoresExistentes.map((name) => Text('- $name')).toList(),
+
                     ],
                   ),
                 ),
@@ -355,7 +395,9 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
+                          if (value == null || value
+                              .trim()
+                              .isEmpty) {
                             return '*Campo obrigatório';
                           }
                           return null;
@@ -371,7 +413,9 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
+                          if (value == null || value
+                              .trim()
+                              .isEmpty) {
                             return '*Campo obrigatório';
                           }
                           final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
@@ -381,7 +425,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
                       const Text('Password'),
                       TextFormField(
@@ -391,31 +435,47 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
+                          if (value == null || value
+                              .trim()
+                              .isEmpty) {
                             return '*Campo obrigatório';
                           }
-                          if (value.trim().length < 6) {
+                          if (value
+                              .trim()
+                              .length < 6) {
                             return 'A password deve ter pelo menos 6 caracteres';
                           }
                           return null;
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 20),
 
                       Center(
                         child: ElevatedButton(
                           onPressed: registrarInstrutor,
-                          child: const Text('Registar Instrutor'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF16ADC2),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 50, vertical: 15),
+                                horizontal: 40, vertical: 16),
                           ),
+                          child: const Text('Registar Instrutor'),
                         ),
                       ),
                     ],
                   ),
+                ),
+
+              // Área do Calendário
+              if (showCalendar)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const CalendarioWeb(),
                 ),
             ],
           ),

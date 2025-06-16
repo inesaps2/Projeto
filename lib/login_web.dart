@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'painel_recepcionista.dart'; // novo nome da página principal da recepcionista
+import 'package:projeto/registar_utilizador.dart';
 
 class LoginWeb extends StatefulWidget {
   const LoginWeb({super.key});
@@ -37,7 +37,7 @@ class _LoginWebState extends State<LoginWeb> {
         if (idType == 3) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const PainelRecepcionista()),
+            MaterialPageRoute(builder: (_) => const RegistarUtilizador()),
           );
         } else {
           _mostrarMensagem('Apenas recepcionistas podem aceder à versão web.');

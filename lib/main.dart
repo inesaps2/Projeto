@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart'; // Para detectar se é web
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:projeto/login_web.dart';
 
 import 'pagina_inicial_web.dart';
 import 'login_selector.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'painel_recepcionista.dart';
+import 'package:projeto/registar_utilizador.dart';
 
 class LoginRecepcionista extends StatefulWidget {
   const LoginRecepcionista({super.key});
@@ -39,7 +39,7 @@ class _LoginRecepcionistaState extends State<LoginRecepcionista> {
           // ✅ É recepcionista
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const PainelRecepcionista()),
+            MaterialPageRoute(builder: (_) => const RegistarUtilizador()),
           );
         } else {
           _mostrarMensagem('Apenas recepcionistas podem aceder à versão web.');
