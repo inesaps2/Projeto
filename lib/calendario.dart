@@ -39,18 +39,13 @@ class _CalendarioState extends State<Calendario> {
         final dt = DateTime.parse(aula['data_hora']);
         final key = DateTime(dt.year, dt.month, dt.day);
         final hora = dt.hour;
-        final nome = aula['nome_aluno'] ?? '';
+        final nome = aula['nome_aluno'] ?? aula['nome_estudante'] ?? '';
 
         if (!novosEventos.containsKey(key)) {
           novosEventos[key] = {};
         }
         novosEventos[key]![hora] = nome;
       }
-
-      print('Eventos carregados:');
-      novosEventos.forEach((key, value) {
-        print('$key -> $value');
-      });
 
       setState(() {
         _eventos = novosEventos;
@@ -59,7 +54,6 @@ class _CalendarioState extends State<Calendario> {
       print('Erro ao carregar aulas: ${response.statusCode}');
     }
   }
-
 
   void _mostrarDialogoMarcarAula(int horaSelecionada) {
     final nomeController = TextEditingController();
