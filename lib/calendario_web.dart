@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:projeto/registar_utilizador.dart';
 import 'package:projeto/teste.dart';
 import 'dart:convert';
 import 'package:table_calendar/table_calendar.dart';
@@ -184,25 +185,36 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF16ADC2),
+        title: const Text('Calendário'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const RegistarUtilizador()),
+            );
+          },
+        ),
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              TextField(
+                controller: _instrutorController,
+                decoration: const InputDecoration(
+                  labelText: 'Nome do Instrutor',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                ),
+              ),
+              const SizedBox(height: 8),
               Row(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _instrutorController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome do Instrutor',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: _verificarInstrutor,
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[700]),
@@ -246,7 +258,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                               TextButton(
                                 onPressed: () async {
                                   final nome = nomeController.text.trim();
-                                  if (nome.isEmpty) return;
+                                  if (nome.isEmpty || _selectedDay == null) return;
 
                                   final uri = Uri.parse('http://localhost:3000/api/aulas');
                                   final resp = await http.post(
@@ -343,66 +355,70 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                   style: const TextStyle(fontSize: 18),
                 ),
               const SizedBox(height: 16),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: 11,
-                separatorBuilder: (context, index) => const Divider(),
-                itemBuilder: (context, index) {
-                  final hora = 9 + index;
-                  final dia = DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
-                  final eventosDoDia = _eventos[dia] ?? {};
-                  final nomeAluno = eventosDoDia[hora];
-                  print('Dia: $dia, Hora: $hora, Nome: $nomeAluno');
-
-                  return ListTile(
-                    title: Text('$hora:00'),
-                    subtitle: nomeAluno != null ? Text('Marcado por: $nomeAluno') : null,
-                  );
-                },
-              ),
+              if (_selectedDay != null)
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: 11,
+                  separatorBuilder: (context, index) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final hora = 9 + index;
+                    final dia = DateTime(
+                      _selectedDay!.year,
+                      _selectedDay!.month,
+                      _selectedDay!.day,
+                    );
+                    final eventosDoDia = _eventos[dia] ?? {};
+                    final nomeAluno = eventosDoDia[hora];
+                    return Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('$hora:00', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                if (nomeAluno != null)
+                                  Text('Marcado por: $nomeAluno', style: const TextStyle(fontSize: 14)),
+                              ],
+                            ),
+                          ),
+                          if (nomeAluno != null)
+                            Row(
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Aula às $hora:00 aceita.')),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                                  child: const Text('Aceitar'),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Aula às $hora:00 recusada.')),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                  child: const Text('Recusar'),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF16ADC2),
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        currentIndex: 1,
-        onTap: (int index) {
-          if (index == 0) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PaginaInicial()));
-          } else if (index == 2) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Perfil()));
-          }
-        },
-        items: [
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(icon: Icons.home, index: 0, currentIndex: 1),
-            label: 'Início',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(icon: Icons.calendar_month_outlined, index: 1, currentIndex: 1),
-            label: 'Calendário',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(icon: Icons.person, index: 2, currentIndex: 1),
-            label: 'Perfil',
-          ),
-        ],
-      ),
-    );
-  }
-  Widget _buildNavIcon({required IconData icon, required int index, required int currentIndex}) {
-    final bool isSelected = index == currentIndex;
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.white24 : Colors.transparent,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon),
     );
   }
 }
