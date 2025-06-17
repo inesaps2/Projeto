@@ -15,9 +15,51 @@ class CalendarioWeb extends StatefulWidget {
 }
 
 class _CalendarioWebState extends State<CalendarioWeb> {
+  final TextEditingController _instrutorController = TextEditingController();
+
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   Map<DateTime, Map<int, String>> _eventos = {};
+
+  Future<void> _verificarInstrutor() async {
+    final nomeInstrutor = _instrutorController.text.trim();
+
+    if (nomeInstrutor.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, insira o nome do instrutor.')),
+      );
+      return;
+    }
+
+    try {
+      final uri = Uri.parse('http://localhost:3000/api/instrutores?nome=$nomeInstrutor');
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data != null && data['existe'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Instrutor "$nomeInstrutor" encontrado!')),
+          );
+          await _carregarAulasDoInstrutor(nomeInstrutor);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Instrutor "$nomeInstrutor" não encontrado.')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao verificar instrutor.')),
+        );
+      }
+    } catch (e) {
+      print('Erro na verificação: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro de conexão com o servidor.')),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -27,7 +69,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   Future<void> _carregarAulasMarcadas() async {
-    final uri = Uri.parse('http://10.0.2.2:3000/api/aulas?email=${Session.email}');
+    final uri = Uri.parse('http://localhost:3000/api/aulas?email=${Session.email}');
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
@@ -60,6 +102,34 @@ class _CalendarioWebState extends State<CalendarioWeb> {
     }
   }
 
+  Future<void> _carregarAulasDoInstrutor(String nomeInstrutor) async {
+    final uri = Uri.parse('http://localhost:3000/api/aulas?instrutor=$nomeInstrutor');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      print('Aulas do instrutor recebidas: $data');
+      final Map<DateTime, Map<int, String>> novosEventos = {};
+
+      for (var aula in data) {
+        final dt = DateTime.parse(aula['data_hora']);
+        final key = DateTime(dt.year, dt.month, dt.day);
+        final hora = dt.hour;
+        final nome = aula['nome_aluno'] ?? '';
+
+        if (!novosEventos.containsKey(key)) {
+          novosEventos[key] = {};
+        }
+        novosEventos[key]![hora] = nome;
+      }
+
+      setState(() {
+        _eventos = novosEventos;
+      });
+    } else {
+      print('Erro ao carregar aulas do instrutor: ${response.statusCode}');
+    }
+  }
 
   void _mostrarDialogoMarcarAula(int horaSelecionada) {
     final nomeController = TextEditingController();
@@ -79,7 +149,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                 final nome = nomeController.text.trim();
                 if (nome.isEmpty) return;
 
-                final uri = Uri.parse('http://10.0.2.2:3000/api/aulas');
+                final uri = Uri.parse('http://localhost:3000/api/aulas');
                 final resp = await http.post(
                   uri,
                   headers: {'Content-Type': 'application/json'},
@@ -121,8 +191,24 @@ class _CalendarioWebState extends State<CalendarioWeb> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _instrutorController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nome do Instrutor',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _verificarInstrutor,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[700]),
+                    child: const Text('Ver Horário'),
+                  ),
+                  const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () {
                       final nomeController = TextEditingController();
@@ -162,7 +248,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                                   final nome = nomeController.text.trim();
                                   if (nome.isEmpty) return;
 
-                                  final uri = Uri.parse('http://10.0.2.2:3000/api/aulas');
+                                  final uri = Uri.parse('http://localhost:3000/api/aulas');
                                   final resp = await http.post(
                                     uri,
                                     headers: {'Content-Type': 'application/json'},
