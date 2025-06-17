@@ -15,6 +15,8 @@ class CalendarioWeb extends StatefulWidget {
   State<CalendarioWeb> createState() => _CalendarioWebState();
 }
 
+Set<String> _horariosAceites = {};
+
 class _CalendarioWebState extends State<CalendarioWeb> {
   final TextEditingController _instrutorController = TextEditingController();
 
@@ -370,10 +372,18 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                     );
                     final eventosDoDia = _eventos[dia] ?? {};
                     final nomeAluno = eventosDoDia[hora];
+                    final diaHoraKey = '${dia.toIso8601String().split('T')[0]}_$hora';
+                    final aceite = _horariosAceites.contains(diaHoraKey);
+
                     return Container(
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: aceite ? Colors.green[100] : null,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
@@ -386,13 +396,17 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                               ],
                             ),
                           ),
-                          if (nomeAluno != null)
+                          if (nomeAluno != null && !aceite)
                             Row(
                               children: [
                                 ElevatedButton(
                                   onPressed: () {
+                                    setState(() {
+                                      _horariosAceites.add(diaHoraKey);
+                                    });
+
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Aula às $hora:00 aceita.')),
+                                      SnackBar(content: Text('Aula às $hora:00 aceite.')),
                                     );
                                   },
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
