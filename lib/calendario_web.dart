@@ -17,6 +17,11 @@ class CalendarioWeb extends StatefulWidget {
 
 Set<String> _horariosAceites = {};
 
+String gerarChaveDiaHora(DateTime data, int hora) {
+  final dataFormatada = '${data.year}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
+  return '${dataFormatada}_$hora';
+}
+
 class _CalendarioWebState extends State<CalendarioWeb> {
   final TextEditingController _instrutorController = TextEditingController();
 
@@ -130,7 +135,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
       final List data = jsonDecode(response.body);
       print('Aulas do instrutor recebidas: $data');
 
-      // 👉 Pegar id do instrutor da primeira aula, se existir
+      //Pegar id do instrutor da primeira aula, se existir
       if (data.isNotEmpty && _idInstrutorSelecionado == null) {
         final primeiroId = data.first['id_instructor'];
         setState(() {
@@ -151,6 +156,12 @@ class _CalendarioWebState extends State<CalendarioWeb> {
           novosEventos[key] = {};
         }
         novosEventos[key]![hora] = nome;
+
+        final class_status = aula['class_status'] ?? '';
+        final diaHoraKey = '${dt.year}-${dt.month}-${dt.day}_$hora';
+        if (class_status == 'aceite') {
+          _horariosAceites.add(diaHoraKey);
+        }
       }
 
       setState(() {
@@ -201,7 +212,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
 
         // Atualiza a interface sem recarregar tudo
         setState(() {
-          final diaHoraKey = '${data.year}-${data.month}-${data.day}_$hora';
+          final diaHoraKey = gerarChaveDiaHora(data, hora);
           if (novoStatus == 'aceite') {
             _horariosAceites.add(diaHoraKey);
           } else if (novoStatus == 'recusada') {
@@ -478,7 +489,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                     );
                     final eventosDoDia = _eventos[dia] ?? {};
                     final nomeAluno = eventosDoDia[hora];
-                    final diaHoraKey = '${dia.toIso8601String().split('T')[0]}_$hora';
+                    final diaHoraKey = gerarChaveDiaHora(dia, hora);
                     final aceite = _horariosAceites.contains(diaHoraKey);
 
                     return Container(

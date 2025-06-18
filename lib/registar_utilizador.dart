@@ -69,7 +69,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
           'email': emailAlunoController.text,
           'password': passwordAlunoController.text,
           'category': categoriaSelecionada,
-          'instrutor': instrutorSelecionado,
+          'instructor': instrutorSelecionado,
           'id_type': 1, // id_type fixo para aluno
         }),
       );
@@ -236,6 +236,35 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
               ),
 
               const SizedBox(height: 30),
+              // Painel informativo abaixo dos botões
+              Card(
+                elevation: 4,
+                margin: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Informações Gerais',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      Text('👨‍🏫 Número de instrutores: ${instrutoresExistentes.length}'),
+                      Text('📅 Aulas pendentes: ...'),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Instrutores registados:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      ...instrutoresExistentes.map((name) => Text('- $name')).toList(),
+                    ],
+                  ),
+                ),
+              ),
+
 
               // Formulário Aluno
               if (showRegisterAlunoFields)
