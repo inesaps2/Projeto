@@ -123,10 +123,16 @@ class _CalendarioState extends State<Calendario> {
                     width: 150,
                     height: 50,
                   ),
+                  if (_selectedDay?.weekday != DateTime.sunday)
                   ElevatedButton(
                     onPressed: () {
                       final nomeController = TextEditingController();
                       int horaSelecionada = 9;
+
+                      final isSabado = _selectedDay!.weekday == DateTime.saturday;
+                      final horasDisponiveis = isSabado
+                          ? List.generate(5, (index) => 9 + index)   // 9 a 13
+                          : List.generate(11, (index) => 9 + index); // 9 a 19
 
                       showDialog(
                         context: context,
@@ -144,7 +150,7 @@ class _CalendarioState extends State<Calendario> {
                                 DropdownButtonFormField<int>(
                                   value: horaSelecionada,
                                   decoration: const InputDecoration(labelText: 'Hora'),
-                                  items: List.generate(11, (index) => 9 + index).map((hora) {
+                                  items: horasDisponiveis.map((hora) {
                                     return DropdownMenuItem<int>(
                                       value: hora,
                                       child: Text('$hora:00'),
@@ -269,9 +275,23 @@ class _CalendarioState extends State<Calendario> {
                   final nomeAluno = eventosDoDia[hora];
                   print('Dia: $dia, Hora: $hora, Nome: $nomeAluno');
 
-                  return ListTile(
-                    title: Text('$hora:00'),
-                    subtitle: nomeAluno != null ? Text('Marcado por: $nomeAluno') : null,
+                  final isDomingo = dia.weekday == DateTime.sunday;
+                  final isSabado = dia.weekday == DateTime.saturday;
+                  final horaForaDoHorarioSabado = isSabado && hora >= 14 && hora <= 19;
+
+                  final isHoraBloqueada = isDomingo || horaForaDoHorarioSabado;
+
+                  return Container(
+                    decoration: isHoraBloqueada
+                        ? BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(12),
+                    )
+                        : null,
+                    child: ListTile(
+                      title: Text('$hora:00'),
+                      subtitle: nomeAluno != null ? Text('Marcado por: $nomeAluno') : null,
+                    ),
                   );
                 },
               ),
