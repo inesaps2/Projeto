@@ -173,35 +173,38 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   Future<void> _atualizarStatusAula(DateTime data, int hora, String novoStatus) async {
-    if (_idInstrutorSelecionado == null) {
-      print('Erro: Nenhum instrutor selecionado');
-      return;
-    }
+    if (_idInstrutorSelecionado == null) return;
+
+    final dataFormatada = '${data.year}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
+    final horaFormatada = hora.toString().padLeft(2, '0');
 
     try {
-      // Formata a data e hora para o formato esperado pelo banco
-      final dataFormatada = '${data.year}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
-      final horaFormatada = hora.toString().padLeft(2, '0');
-      final dataHora = '$dataFormatada $horaFormatada:00:00.000'; // Adiciona milissegundos
+      late final http.Response response;
 
-      print('Enviando requisição para: http://localhost:3000/api/classes/status');
-      print('Dados: ${{
-        'id_instructor': _idInstrutorSelecionado,
-        'data': dataFormatada,
-        'hora': horaFormatada,
-        'novo_status': novoStatus
-      }}');
-
-      final response = await http.put(
-        Uri.parse('http://localhost:3000/api/classes/status'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'id_instructor': _idInstrutorSelecionado,
-          'data': dataFormatada,
-          'hora': horaFormatada,
-          'novo_status': novoStatus,
-        }),
-      );
+      if (novoStatus == 'recusada') {
+        // Para recusar, usamos DELETE
+        response = await http.delete(
+          Uri.parse('http://localhost:3000/api/aulas'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'id_instructor': _idInstrutorSelecionado,
+            'data': dataFormatada,
+            'hora': horaFormatada,
+          }),
+        );
+      } else {
+        // Para aceitar, usamos PUT
+        response = await http.put(
+          Uri.parse('http://localhost:3000/api/classes/status'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'id_instructor': _idInstrutorSelecionado,
+            'data': dataFormatada,
+            'hora': horaFormatada,
+            'novo_status': novoStatus,
+          }),
+        );
+      }
 
       print('Status code: ${response.statusCode}');
       print('Response body: ${response.body}');
@@ -210,15 +213,8 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         final responseData = jsonDecode(response.body);
         print('Resposta do servidor: $responseData');
 
-        // Atualiza a interface sem recarregar tudo
-        setState(() {
-          final diaHoraKey = gerarChaveDiaHora(data, hora);
-          if (novoStatus == 'aceite') {
-            _horariosAceites.add(diaHoraKey);
-          } else if (novoStatus == 'recusada') {
-            _horariosAceites.remove(diaHoraKey);
-          }
-        });
+        // Recarrega as aulas para atualizar a lista
+        await _carregarAulasDoInstrutor(_instrutorController.text.trim());
 
         // Mostra mensagem de sucesso
         if (mounted) {
@@ -227,8 +223,9 @@ class _CalendarioWebState extends State<CalendarioWeb> {
               content: Text(
                   novoStatus == 'aceite'
                       ? 'Aula aceita com sucesso!'
-                      : 'Aula recusada com sucesso!'
+                      : 'Aula recusada e removida com sucesso!'
               ),
+              backgroundColor: Colors.green,
             ),
           );
         }
@@ -237,7 +234,10 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         print('Erro ao atualizar status: $error');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro: $error')),
+            SnackBar(
+              content: Text('Erro: $error'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
@@ -245,7 +245,10 @@ class _CalendarioWebState extends State<CalendarioWeb> {
       print('Erro na requisição: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro de conexão: $e')),
+          SnackBar(
+            content: Text('Erro de conexão: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
