@@ -182,7 +182,6 @@ class _CalendarioWebState extends State<CalendarioWeb> {
       late final http.Response response;
 
       if (novoStatus == 'recusada') {
-        // Para recusar, usamos DELETE
         response = await http.delete(
           Uri.parse('http://localhost:3000/api/aulas'),
           headers: {'Content-Type': 'application/json'},
@@ -304,6 +303,195 @@ class _CalendarioWebState extends State<CalendarioWeb> {
     );
   }
 
+  void _mostrarDialogoBloquearIntervalo() {
+    DateTime? dataInicio;
+    DateTime? dataFim;
+    int horaInicio = 9;
+    int horaFim = 19;
+    String motivoSelecionado = 'Exame'; // Valor padrão
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Bloquear Horas e Dias'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Motivo
+                    const Text('Motivo:'),
+                    DropdownButton<String>(
+                      value: motivoSelecionado,
+                      isExpanded: true,
+                      items: ['Exame', 'Férias', 'Outro'].map((motivo) {
+                        return DropdownMenuItem<String>(
+                          value: motivo,
+                          child: Text(motivo),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setStateDialog(() {
+                            motivoSelecionado = value;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Data Início
+                    Row(
+                      children: [
+                        const Text('Data Início:'),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () async {
+                            final dataSelecionada = await showDatePicker(
+                              context: context,
+                              initialDate: dataInicio ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030),
+                            );
+                            if (dataSelecionada != null) {
+                              setStateDialog(() {
+                                dataInicio = dataSelecionada;
+                                if (dataFim != null && dataFim!.isBefore(dataInicio!)) {
+                                  dataFim = dataInicio;
+                                }
+                              });
+                            }
+                          },
+                          child: Text(
+                            dataInicio != null
+                                ? '${dataInicio!.day}/${dataInicio!.month}/${dataInicio!.year}'
+                                : 'Selecionar',
+                            style: const TextStyle(color: Colors.blue),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Data Fim
+                    Row(
+                      children: [
+                        const Text('Data Fim:'),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () async {
+                            final dataSelecionada = await showDatePicker(
+                              context: context,
+                              initialDate: dataFim ?? dataInicio ?? DateTime.now(),
+                              firstDate: dataInicio ?? DateTime(2020),
+                              lastDate: DateTime(2030),
+                            );
+                            if (dataSelecionada != null) {
+                              setStateDialog(() {
+                                dataFim = dataSelecionada;
+                              });
+                            }
+                          },
+                          child: Text(
+                            dataFim != null
+                                ? '${dataFim!.day}/${dataFim!.month}/${dataFim!.year}'
+                                : 'Selecionar',
+                            style: const TextStyle(color: Colors.blue),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Hora Início
+                    Row(
+                      children: [
+                        const Text('Hora Início:'),
+                        const SizedBox(width: 8),
+                        DropdownButton<int>(
+                          value: horaInicio,
+                          items: List.generate(11, (index) => 9 + index).map((hora) {
+                            return DropdownMenuItem<int>(
+                              value: hora,
+                              child: Text('$hora:00'),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null && value <= horaFim) {
+                              setStateDialog(() {
+                                horaInicio = value;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+
+                    // Hora Fim
+                    Row(
+                      children: [
+                        const Text('Hora Fim:'),
+                        const SizedBox(width: 8),
+                        DropdownButton<int>(
+                          value: horaFim,
+                          items: List.generate(11, (index) => 9 + index).map((hora) {
+                            return DropdownMenuItem<int>(
+                              value: hora,
+                              child: Text('$hora:00'),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null && value >= horaInicio) {
+                              setStateDialog(() {
+                                horaFim = value;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (dataInicio == null || dataFim == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Por favor, selecione o intervalo de datas.')),
+                      );
+                      return;
+                    }
+                    if (horaInicio > horaFim) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Hora início não pode ser maior que hora fim.')),
+                      );
+                      return;
+                    }
+
+                    // Aqui pode enviar para backend ou processar localmente
+                    print('Motivo: $motivoSelecionado');
+                    print('De $dataInicio a $dataFim, das $horaInicio às $horaFim');
+
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Confirmar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -343,79 +531,104 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                     child: const Text('Ver Horário'),
                   ),
                   const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      final nomeController = TextEditingController();
-                      int horaSelecionada = 9;
+                  // Aqui: só mostra o botão se o dia selecionado não for domingo
+                  if (_selectedDay == null || _selectedDay!.weekday != DateTime.sunday)
+                    ElevatedButton(
+                      onPressed: () {
+                        final nomeController = TextEditingController();
+                        int horaSelecionada = 9;
 
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text('Marcar Aula'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TextField(
-                                  controller: nomeController,
-                                  decoration: const InputDecoration(labelText: 'Nome'),
-                                ),
-                                const SizedBox(height: 16),
-                                DropdownButtonFormField<int>(
-                                  value: horaSelecionada,
-                                  decoration: const InputDecoration(labelText: 'Hora'),
-                                  items: List.generate(11, (index) => 9 + index).map((hora) {
-                                    return DropdownMenuItem<int>(
-                                      value: hora,
-                                      child: Text('$hora:00'),
+                        // Definir lista de horas dependendo do dia selecionado
+                        List<int> horasDisponiveis;
+                        if (_selectedDay != null && _selectedDay!.weekday == DateTime.saturday) {
+                          horasDisponiveis = [9, 10, 11, 12, 13];
+                        } else {
+                          horasDisponiveis = List.generate(11, (index) => 9 + index); // 9 a 19
+                        }
+
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: const Text('Marcar Aula'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextField(
+                                    controller: nomeController,
+                                    decoration: const InputDecoration(labelText: 'Nome'),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  DropdownButtonFormField<int>(
+                                    value: horaSelecionada,
+                                    decoration: const InputDecoration(labelText: 'Hora'),
+                                    items: horasDisponiveis.map((hora) {
+                                      return DropdownMenuItem<int>(
+                                        value: hora,
+                                        child: Text('$hora:00'),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      horaSelecionada = value!;
+                                    },
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () async {
+                                    final nome = nomeController.text.trim();
+                                    if (nome.isEmpty || _selectedDay == null) return;
+
+                                    final uri = Uri.parse('http://localhost:3000/api/aulas');
+                                    final resp = await http.post(
+                                      uri,
+                                      headers: {'Content-Type': 'application/json'},
+                                      body: jsonEncode({
+                                        'email': Session.email,
+                                        'nomeAluno': nome,
+                                        'data': _selectedDay!.toIso8601String().split('T')[0],
+                                        'hora': horaSelecionada.toString(),
+                                      }),
                                     );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    horaSelecionada = value!;
+
+                                    Navigator.pop(context);
+                                    if (resp.statusCode == 201) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("Aula marcada com sucesso!")),
+                                      );
+                                      _carregarAulasMarcadas();
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("Erro ao marcar aula.")),
+                                      );
+                                    }
                                   },
+                                  child: const Text('Confirmar'),
                                 ),
                               ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () async {
-                                  final nome = nomeController.text.trim();
-                                  if (nome.isEmpty || _selectedDay == null) return;
-
-                                  final uri = Uri.parse('http://localhost:3000/api/aulas');
-                                  final resp = await http.post(
-                                    uri,
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: jsonEncode({
-                                      'email': Session.email,
-                                      'nomeAluno': nome,
-                                      'data': _selectedDay!.toIso8601String().split('T')[0],
-                                      'hora': horaSelecionada.toString(),
-                                    }),
-                                  );
-
-                                  Navigator.pop(context);
-                                  if (resp.statusCode == 201) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text("Aula marcada com sucesso!")),
-                                    );
-                                    _carregarAulasMarcadas();
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text("Erro ao marcar aula.")),
-                                    );
-                                  }
-                                },
-                                child: const Text('Confirmar'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
-                    child: const Text('Marcar Aula'),
+                            );
+                          },
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
+                      child: const Text('Marcar Aula'),
+                    ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _mostrarDialogoBloquearIntervalo,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                    child: const Text('Bloquear Horas'),
                   ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Lógica para bloquear dias
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
+                    child: const Text('Bloquear Dias'),
+                  ),
+                  const SizedBox(width: 8),
                 ],
               ),
               const SizedBox(height: 20),
@@ -483,68 +696,76 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: 11,
                   separatorBuilder: (context, index) => const Divider(),
-                  itemBuilder: (context, index) {
-                    final hora = 9 + index;
-                    final dia = DateTime(
-                      _selectedDay!.year,
-                      _selectedDay!.month,
-                      _selectedDay!.day,
-                    );
-                    final eventosDoDia = _eventos[dia] ?? {};
-                    final nomeAluno = eventosDoDia[hora];
-                    final diaHoraKey = gerarChaveDiaHora(dia, hora);
-                    final aceite = _horariosAceites.contains(diaHoraKey);
+                    itemBuilder: (context, index) {
+                      final hora = 9 + index;
+                      final dia = DateTime(
+                        _selectedDay!.year,
+                        _selectedDay!.month,
+                        _selectedDay!.day,
+                      );
+                      final eventosDoDia = _eventos[dia] ?? {};
+                      final nomeAluno = eventosDoDia[hora];
+                      final diaHoraKey = gerarChaveDiaHora(dia, hora);
+                      final aceite = _horariosAceites.contains(diaHoraKey);
 
-                    return Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: aceite ? Colors.green[100] : null,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
+                      // Verificar se é domingo ou sábado entre 14 e 19
+                      bool bloquear = false;
+                      if (dia.weekday == DateTime.sunday) {
+                        bloquear = true;
+                      } else if (dia.weekday == DateTime.saturday && hora >= 14 && hora <= 19) {
+                        bloquear = true;
+                      }
 
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('$hora:00', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                if (nomeAluno != null)
-                                  Text('Marcado por: $nomeAluno', style: const TextStyle(fontSize: 14)),
-                              ],
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: bloquear
+                              ? Colors.grey[300] // cor cinza para bloquear
+                              : (aceite ? Colors.green[100] : null),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('$hora:00', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  if (nomeAluno != null)
+                                    Text('Marcado por: $nomeAluno', style: const TextStyle(fontSize: 14)),
+                                ],
+                              ),
                             ),
-                          ),
-                          if (nomeAluno != null && !aceite)
-                            Row(
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    print('Aceitar aula - Instrutor: $_idInstrutorSelecionado, Data: ${_selectedDay.toString().split(' ')[0]}, Hora: $hora');
-                                    if (_idInstrutorSelecionado != null && _selectedDay != null) {
-                                      await _atualizarStatusAula(_selectedDay!, hora, 'aceite');
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                                  child: const Text('Aceitar'),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    if (_idInstrutorSelecionado != null && _selectedDay != null) {
-                                      await _atualizarStatusAula(_selectedDay!, hora, 'recusada');
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                  child: const Text('Recusar'),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    );
-                  },
+                            if (nomeAluno != null && !aceite && !bloquear) // desabilitar botões se estiver bloqueado
+                              Row(
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      if (_idInstrutorSelecionado != null && _selectedDay != null) {
+                                        await _atualizarStatusAula(_selectedDay!, hora, 'aceite');
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                                    child: const Text('Aceitar'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      if (_idInstrutorSelecionado != null && _selectedDay != null) {
+                                        await _atualizarStatusAula(_selectedDay!, hora, 'recusada');
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                    child: const Text('Recusar'),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      );
+                    }
                 ),
             ],
           ),
