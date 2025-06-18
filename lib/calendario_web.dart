@@ -20,6 +20,15 @@ Set<String> _horariosAceites = {};
 class _CalendarioWebState extends State<CalendarioWeb> {
   final TextEditingController _instrutorController = TextEditingController();
 
+  int? _idInstrutorSelecionado;
+
+  void onInstrutorSelecionado(int id) {
+    setState(() {
+      _idInstrutorSelecionado = id;
+    });
+    print('Instrutor selecionado com id: $_idInstrutorSelecionado');
+  }
+
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   Map<DateTime, Map<int, String>> _eventos = {};
@@ -38,10 +47,18 @@ class _CalendarioWebState extends State<CalendarioWeb> {
       final uri = Uri.parse('http://localhost:3000/api/instrutores?nome=$nomeInstrutor');
       final response = await http.get(uri);
 
+      print('Body completo da resposta: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('Resposta do backend (instrutor): $data');
 
         if (data != null && data['existe'] == true) {
+          final id_instructor = data['id'];  // pega o id do instrutor
+          print('Instrutor selecionado com id: $id_instructor');
+          setState(() {
+            _idInstrutorSelecionado = id_instructor;  // atualiza o estado com o id
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Instrutor "$nomeInstrutor" encontrado!')),
           );
@@ -72,7 +89,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   Future<void> _carregarAulasMarcadas() async {
-    final uri = Uri.parse('http://localhost:3000/api/aulas?email=${Session.email}');
+    final uri = Uri.parse('http://localhost:3000/aulas?email=${Session.email}');
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
@@ -112,6 +129,16 @@ class _CalendarioWebState extends State<CalendarioWeb> {
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
       print('Aulas do instrutor recebidas: $data');
+
+      // 👉 Pegar id do instrutor da primeira aula, se existir
+      if (data.isNotEmpty && _idInstrutorSelecionado == null) {
+        final primeiroId = data.first['id_instructor'];
+        setState(() {
+          _idInstrutorSelecionado = primeiroId;
+        });
+        print('ID do instrutor definido a partir das aulas: $primeiroId');
+      }
+
       final Map<DateTime, Map<int, String>> novosEventos = {};
 
       for (var aula in data) {
@@ -131,6 +158,85 @@ class _CalendarioWebState extends State<CalendarioWeb> {
       });
     } else {
       print('Erro ao carregar aulas do instrutor: ${response.statusCode}');
+    }
+  }
+
+  Future<void> _atualizarStatusAula(DateTime data, int hora, String novoStatus) async {
+    if (_idInstrutorSelecionado == null) {
+      print('Erro: Nenhum instrutor selecionado');
+      return;
+    }
+
+    try {
+      // Formata a data e hora para o formato esperado pelo banco
+      final dataFormatada = '${data.year}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
+      final horaFormatada = hora.toString().padLeft(2, '0');
+      final dataHora = '$dataFormatada $horaFormatada:00:00.000'; // Adiciona milissegundos
+
+      print('Enviando requisição para: http://localhost:3000/api/classes/status');
+      print('Dados: ${{
+        'id_instructor': _idInstrutorSelecionado,
+        'data': dataFormatada,
+        'hora': horaFormatada,
+        'novo_status': novoStatus
+      }}');
+
+      final response = await http.put(
+        Uri.parse('http://localhost:3000/api/classes/status'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'id_instructor': _idInstrutorSelecionado,
+          'data': dataFormatada,
+          'hora': horaFormatada,
+          'novo_status': novoStatus,
+        }),
+      );
+
+      print('Status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        print('Resposta do servidor: $responseData');
+
+        // Atualiza a interface sem recarregar tudo
+        setState(() {
+          final diaHoraKey = '${data.year}-${data.month}-${data.day}_$hora';
+          if (novoStatus == 'aceite') {
+            _horariosAceites.add(diaHoraKey);
+          } else if (novoStatus == 'recusada') {
+            _horariosAceites.remove(diaHoraKey);
+          }
+        });
+
+        // Mostra mensagem de sucesso
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  novoStatus == 'aceite'
+                      ? 'Aula aceita com sucesso!'
+                      : 'Aula recusada com sucesso!'
+              ),
+            ),
+          );
+        }
+      } else {
+        final error = jsonDecode(response.body)?['error'] ?? 'Erro desconhecido';
+        print('Erro ao atualizar status: $error');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro: $error')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Erro na requisição: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro de conexão: $e')),
+        );
+      }
     }
   }
 
@@ -383,7 +489,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                       ),
                       child: Row(
 
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
@@ -400,24 +506,21 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                             Row(
                               children: [
                                 ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _horariosAceites.add(diaHoraKey);
-                                    });
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Aula às $hora:00 aceite.')),
-                                    );
+                                  onPressed: () async {
+                                    print('Aceitar aula - Instrutor: $_idInstrutorSelecionado, Data: ${_selectedDay.toString().split(' ')[0]}, Hora: $hora');
+                                    if (_idInstrutorSelecionado != null && _selectedDay != null) {
+                                      await _atualizarStatusAula(_selectedDay!, hora, 'aceite');
+                                    }
                                   },
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                                   child: const Text('Aceitar'),
                                 ),
                                 const SizedBox(width: 8),
                                 ElevatedButton(
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Aula às $hora:00 recusada.')),
-                                    );
+                                  onPressed: () async {
+                                    if (_idInstrutorSelecionado != null && _selectedDay != null) {
+                                      await _atualizarStatusAula(_selectedDay!, hora, 'recusada');
+                                    }
                                   },
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                                   child: const Text('Recusar'),
