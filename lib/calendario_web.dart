@@ -560,12 +560,11 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                         final nomeController = TextEditingController();
                         int horaSelecionada = 9;
 
-                        // Definir lista de horas dependendo do dia selecionado
                         List<int> horasDisponiveis;
                         if (_selectedDay != null && _selectedDay!.weekday == DateTime.saturday) {
-                          horasDisponiveis = [9, 10, 11, 12, 13];
+                          horasDisponiveis = [9, 10, 11, 12]; // removeu o 13
                         } else {
-                          horasDisponiveis = List.generate(11, (index) => 9 + index); // 9 a 19
+                          horasDisponiveis = List.generate(11, (index) => 9 + index).where((hora) => hora != 13).toList();
                         }
 
                         showDialog(
@@ -686,6 +685,26 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                       );
                     }
                     return null;
+                  },
+                  defaultBuilder: (context, day, focusedDay) {
+                    final dia = DateTime(day.year, day.month, day.day);
+                    final eventosDoDia = _eventos[dia];
+                    if (eventosDoDia != null && eventosDoDia.containsKey(13)) {
+                      // Dia com aula marcada às 13h
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[400], // Cinzento claro
+                          shape: BoxShape.rectangle,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '${day.day}',
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                      );
+                    }
+                    return null; // Usa o padrão se não for às 13h
                   },
                 ),
                 headerStyle: const HeaderStyle(
