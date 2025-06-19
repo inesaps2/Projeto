@@ -41,6 +41,7 @@ class _CalendarioState extends State<Calendario> {
         final hora = dt.hour;
         final name = aula['nome_aluno'] ?? aula['nome_estudante'] ?? '';
         final id = aula['id'];
+        final status = aula['class_status'] ?? 'pendente';
 
         if (!novosEventos.containsKey(key)) {
           novosEventos[key] = {};
@@ -48,6 +49,7 @@ class _CalendarioState extends State<Calendario> {
         novosEventos[key]![hora] = {
           'name': name,
           'id': id,
+          'status': status,
         };
       }
 
@@ -229,7 +231,7 @@ class _CalendarioState extends State<Calendario> {
                   final evento = eventosDoDia[hora];
                   final nomeAluno = evento?['name'];
                   final aulaId = evento?['id'];
-
+                  final status = evento?['status'];
 
                   final isDomingo = dia.weekday == DateTime.sunday;
                   final isSabado = dia.weekday == DateTime.saturday;
@@ -248,7 +250,8 @@ class _CalendarioState extends State<Calendario> {
                     child: ListTile(
                       title: Text('$hora:00'),
                       subtitle: nomeAluno != null ? Text('Marcado por: $nomeAluno') : null,
-                      trailing: (Session.id_type == 1 && foiMarcadoPorEsteAluno)
+                      trailing: (aulaId != null)
+                          ? (Session.id_type == 1 && foiMarcadoPorEsteAluno)
                           ? Builder(builder: (context) {
                         final agora = DateTime.now();
                         final dataHoraAula = DateTime(dia.year, dia.month, dia.day, hora);
@@ -257,55 +260,77 @@ class _CalendarioState extends State<Calendario> {
 
                         return IconButton(
                           icon: Icon(Icons.delete, color: podeApagar ? Colors.red : Colors.grey),
-                          tooltip: podeApagar
-                              ? 'Apagar aula'
-                              : 'Só pode apagar com 24h de antecedência',
+                          tooltip: podeApagar ? 'Apagar aula' : 'Só pode apagar com 24h de antecedência',
                           onPressed: podeApagar
                               ? () async {
                             final confirm = await showDialog<bool>(
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: const Text('Apagar Aula'),
-                                content:
-                                Text('Tem certeza que quer apagar a aula das $hora:00?'),
+                                content: Text('Tem certeza que quer apagar a aula das $hora:00?'),
                                 actions: [
-                                  TextButton(
-                                      onPressed: () => Navigator.pop(context, false),
-                                      child: const Text('Cancelar')),
-                                  TextButton(
-                                      onPressed: () => Navigator.pop(context, true),
-                                      child: const Text('Apagar')),
+                                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+                                  TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Apagar')),
                                 ],
                               ),
                             );
 
-                            if (confirm == true && aulaId != null) {
-                              final uri =
-                              Uri.parse('http://10.0.2.2:3000/api/aulas/$aulaId');
+                            if (confirm == true) {
+                              final uri = Uri.parse('http://10.0.2.2:3000/api/aulas/$aulaId');
                               final response = await http.delete(uri);
 
                               if (response.statusCode == 200) {
-                                final json = jsonDecode(response.body);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content:
-                                      Text(json['message'] ?? "Aula apagada com sucesso.")),
+                                  const SnackBar(content: Text("Aula apagada com sucesso.")),
                                 );
                                 _carregarAulasMarcadas();
                               } else {
-                                final json = jsonDecode(response.body);
-                                final errorMsg = json['error'] ?? "Erro ao apagar aula.";
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(errorMsg)),
+                                  const SnackBar(content: Text("Erro ao apagar aula.")),
                                 );
-                                print("Erro ao apagar aula: ${response.statusCode}");
-                                print("Corpo da resposta: ${response.body}");
                               }
                             }
                           }
                               : null,
                         );
                       })
+                          : (Session.id_type == 2)
+                          ? (status == 'concluída')
+                          ? Text('Concluída', style: TextStyle(color: Colors.green))
+                          : ElevatedButton(
+                        child: const Text('Concluída'),
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Marcar Aula como Concluída'),
+                              content: Text('Confirmar que a aula das $hora:00 foi concluída?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+                                TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirmar')),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            final uri = Uri.parse('http://10.0.2.2:3000/api/aulas/concluir/$aulaId');
+                            final response = await http.post(uri);
+
+                            if (response.statusCode == 200) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Aula marcada como concluída.")),
+                              );
+                              _carregarAulasMarcadas();
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Erro ao marcar aula como concluída.")),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                      )
+                          : null
                           : null,
                     ),
                   );
