@@ -36,7 +36,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
 
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  Map<DateTime, Map<int, String>> _eventos = {};
+  Map<DateTime, Map<int, Map<String, dynamic>>> _eventos = {};
 
   Future<void> _verificarInstrutor() async {
     final nomeInstrutor = _instrutorController.text.trim();
@@ -100,18 +100,30 @@ class _CalendarioWebState extends State<CalendarioWeb> {
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
       print('Dados recebidos: $data');
-      final Map<DateTime, Map<int, String>> novosEventos = {};
+      final Map<DateTime, Map<int, Map<String, dynamic>>> novosEventos = {};
+      final Set<String> novosHorariosAceites = {};
 
       for (var aula in data) {
         final dt = DateTime.parse(aula['data_hora']);
         final key = DateTime(dt.year, dt.month, dt.day);
         final hora = dt.hour;
         final nome = aula['nome_aluno'] ?? '';
+        final status = aula['class_status'] ?? '';
 
         if (!novosEventos.containsKey(key)) {
           novosEventos[key] = {};
         }
-        novosEventos[key]![hora] = nome;
+
+        novosEventos[key]![hora] = {
+          'nome': nome,
+          'status': status,
+        };
+
+        final diaHoraKey = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}_$hora';
+
+        if (status == 'aceite') {
+          novosHorariosAceites.add(diaHoraKey);
+        }
       }
 
       print('Eventos carregados:');
@@ -121,6 +133,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
 
       setState(() {
         _eventos = novosEventos;
+        _horariosAceites = novosHorariosAceites;
       });
     } else {
       print('Erro ao carregar aulas: ${response.statusCode}');
@@ -135,7 +148,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
       final List data = jsonDecode(response.body);
       print('Aulas do instrutor recebidas: $data');
 
-      //Pegar id do instrutor da primeira aula, se existir
+      // Pegar id do instrutor da primeira aula, se existir
       if (data.isNotEmpty && _idInstrutorSelecionado == null) {
         final primeiroId = data.first['id_instructor'];
         setState(() {
@@ -144,28 +157,37 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         print('ID do instrutor definido a partir das aulas: $primeiroId');
       }
 
-      final Map<DateTime, Map<int, String>> novosEventos = {};
+      final Map<DateTime, Map<int, Map<String, dynamic>>> novosEventos = {};
+      final Set<String> novosHorariosAceites = {};
 
       for (var aula in data) {
         final dt = DateTime.parse(aula['data_hora']);
         final key = DateTime(dt.year, dt.month, dt.day);
         final hora = dt.hour;
         final nome = aula['nome_aluno'] ?? '';
+        final status = aula['class_status'] ?? '';
 
         if (!novosEventos.containsKey(key)) {
           novosEventos[key] = {};
         }
-        novosEventos[key]![hora] = nome;
 
-        final class_status = aula['class_status'] ?? '';
-        final diaHoraKey = '${dt.year}-${dt.month}-${dt.day}_$hora';
-        if (class_status == 'aceite') {
-          _horariosAceites.add(diaHoraKey);
+        novosEventos[key]![hora] = {
+          'nome': nome,
+          'status': status,
+        };
+
+        // Corrigir a chave da hora com padding correto
+        final diaHoraKey = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}_$hora';
+        print('Hora: $hora | Aceite: ${status == 'aceite'} | Status: $status');
+
+        if (status == 'aceite') {
+          novosHorariosAceites.add(diaHoraKey);
         }
       }
 
       setState(() {
         _eventos = novosEventos;
+        _horariosAceites = novosHorariosAceites;
       });
     } else {
       print('Erro ao carregar aulas do instrutor: ${response.statusCode}');
@@ -260,7 +282,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Marcar Aulaaaa'),
+          title: const Text('Marcar Aula'),
           content: TextField(
             controller: nomeController,
             decoration: const InputDecoration(labelText: 'Nome'),
@@ -704,9 +726,10 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                         _selectedDay!.day,
                       );
                       final eventosDoDia = _eventos[dia] ?? {};
-                      final nomeAluno = eventosDoDia[hora];
+                      final nomeAluno = eventosDoDia[hora]?['nome'];
                       final diaHoraKey = gerarChaveDiaHora(dia, hora);
                       final aceite = _horariosAceites.contains(diaHoraKey);
+                      print('Hora: $hora | Aceite: $aceite | Status: ${_eventos[dia]?[hora]}');
 
                       // Verificar se é domingo ou sábado entre 14 e 19
                       bool bloquear = false;
@@ -720,8 +743,8 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                         decoration: BoxDecoration(
                           color: bloquear
-                              ? Colors.grey[300] // cor cinza para bloquear
-                              : (aceite ? Colors.green[100] : null),
+                              ? Colors.grey[300]
+                              : (aceite ? const Color(0xFFA5D6A7) : null),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -732,25 +755,39 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('$hora:00', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  Text(
+                                    '$hora:00',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
                                   if (nomeAluno != null)
-                                    Text('Marcado por: $nomeAluno', style: const TextStyle(fontSize: 14)),
+                                    Text(
+                                      'Marcado por: $nomeAluno',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
-                            if (nomeAluno != null && !aceite && !bloquear) // desabilitar botões se estiver bloqueado
+                            if (nomeAluno != null && !bloquear)
                               Row(
                                 children: [
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      if (_idInstrutorSelecionado != null && _selectedDay != null) {
-                                        await _atualizarStatusAula(_selectedDay!, hora, 'aceite');
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                                    child: const Text('Aceitar'),
-                                  ),
-                                  const SizedBox(width: 8),
+                                  if (!aceite)
+                                    ElevatedButton(
+                                      onPressed: () async {
+                                        if (_idInstrutorSelecionado != null && _selectedDay != null) {
+                                          await _atualizarStatusAula(_selectedDay!, hora, 'aceite');
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                                      child: const Text('Aceitar'),
+                                    ),
+                                  if (!aceite) const SizedBox(width: 8),
                                   ElevatedButton(
                                     onPressed: () async {
                                       if (_idInstrutorSelecionado != null && _selectedDay != null) {
@@ -758,7 +795,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                                       }
                                     },
                                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                    child: const Text('Recusar'),
+                                    child: Text(aceite ? 'Apagar' : 'Recusar'),
                                   ),
                                 ],
                               ),
