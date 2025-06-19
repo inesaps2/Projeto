@@ -788,10 +788,10 @@ class _CalendarioWebState extends State<CalendarioWeb> {
               const SizedBox(height: 16),
               if (_selectedDay != null)
                 ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: 11,
-                  separatorBuilder: (context, index) => const Divider(),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: 11,
+                    separatorBuilder: (context, index) => const Divider(),
                     itemBuilder: (context, index) {
                       final hora = 9 + index;
                       final dia = DateTime(
@@ -813,14 +813,17 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                         bloquear = true;
                       }
 
+                      Color? corDeFundo;
+                      if (hora == 13 || bloquear) {
+                        corDeFundo = Colors.grey[300];
+                      } else if (nomeAluno != null && aceite) {
+                        corDeFundo = const Color(0xFFB2F2BB);
+                      }
+
                       return Container(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                         decoration: BoxDecoration(
-                          color: (hora == 13)
-                              ? Colors.grey[300] // célula cinzenta para a hora 13
-                              : (bloquear
-                              ? Colors.grey[300]
-                              : (aceite ? const Color(0xFFB2F2BB) : null)),
+                          color: corDeFundo,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
