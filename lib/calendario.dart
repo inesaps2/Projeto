@@ -249,42 +249,63 @@ class _CalendarioState extends State<Calendario> {
                       title: Text('$hora:00'),
                       subtitle: nomeAluno != null ? Text('Marcado por: $nomeAluno') : null,
                       trailing: (Session.id_type == 1 && foiMarcadoPorEsteAluno)
-                          ? IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Apagar Aula'),
-                              content: Text('Tem certeza que quer apagar a aula das $hora:00?'),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-                                TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Apagar')),
-                              ],
-                            ),
-                          );
+                          ? Builder(builder: (context) {
+                        final agora = DateTime.now();
+                        final dataHoraAula = DateTime(dia.year, dia.month, dia.day, hora);
+                        final diferenca = dataHoraAula.difference(agora);
+                        final podeApagar = diferenca.inHours >= 24;
 
-                          if (confirm == true && aulaId != null) {
-                            final uri = Uri.parse('http://10.0.2.2:3000/api/aulas/$aulaId');
-                            final response = await http.delete(uri);
+                        return IconButton(
+                          icon: Icon(Icons.delete, color: podeApagar ? Colors.red : Colors.grey),
+                          tooltip: podeApagar
+                              ? 'Apagar aula'
+                              : 'Só pode apagar com 24h de antecedência',
+                          onPressed: podeApagar
+                              ? () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Apagar Aula'),
+                                content:
+                                Text('Tem certeza que quer apagar a aula das $hora:00?'),
+                                actions: [
+                                  TextButton(
+                                      onPressed: () => Navigator.pop(context, false),
+                                      child: const Text('Cancelar')),
+                                  TextButton(
+                                      onPressed: () => Navigator.pop(context, true),
+                                      child: const Text('Apagar')),
+                                ],
+                              ),
+                            );
 
-                            if (response.statusCode == 200) {
-                              final json = jsonDecode(response.body);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(json['message'] ?? "Aula apagada com sucesso.")),
-                              );
-                              _carregarAulasMarcadas();
-                            } else {
-                              // Tenta só mostrar o status ou uma mensagem padrão
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Erro ao apagar aula. Verifique a conexão ou tente mais tarde.")),
-                              );
-                              print("Erro ao apagar aula: ${response.statusCode}");
-                              print("Corpo da resposta: ${response.body}");
+                            if (confirm == true && aulaId != null) {
+                              final uri =
+                              Uri.parse('http://10.0.2.2:3000/api/aulas/$aulaId');
+                              final response = await http.delete(uri);
+
+                              if (response.statusCode == 200) {
+                                final json = jsonDecode(response.body);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content:
+                                      Text(json['message'] ?? "Aula apagada com sucesso.")),
+                                );
+                                _carregarAulasMarcadas();
+                              } else {
+                                final json = jsonDecode(response.body);
+                                final errorMsg = json['error'] ?? "Erro ao apagar aula.";
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(errorMsg)),
+                                );
+                                print("Erro ao apagar aula: ${response.statusCode}");
+                                print("Corpo da resposta: ${response.body}");
+                              }
                             }
                           }
-                        },
-                      )
+                              : null,
+                        );
+                      })
                           : null,
                     ),
                   );
