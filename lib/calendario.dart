@@ -246,13 +246,19 @@ class _CalendarioState extends State<Calendario> {
 
                   final foiMarcadoPorEsteAluno = nomeAluno != null && nomeAluno == Session.nome;
 
+                  Color? backgroundColor;
+
+                  if (isHoraBloqueada) {
+                    backgroundColor = Colors.grey[300];
+                  } else if (Session.id_type == 1 && foiMarcadoPorEsteAluno && status == 'aceite') {
+                    backgroundColor = Colors.green[300]; // Verde claro para aulas aceites do aluno
+                  }
+
                   return Container(
-                    decoration: isHoraBloqueada
-                        ? BoxDecoration(
-                      color: Colors.grey[300],
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
                       borderRadius: BorderRadius.circular(12),
-                    )
-                        : null,
+                    ),
                     child: ListTile(
                       title: Text('$hora:00'),
                       subtitle: nomeAluno != null ? Text('Marcado por: $nomeAluno') : null,
