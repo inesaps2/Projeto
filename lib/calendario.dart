@@ -17,7 +17,7 @@ class Calendario extends StatefulWidget {
 class _CalendarioState extends State<Calendario> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  Map<DateTime, Map<int, String>> _eventos = {};
+  Map<DateTime, Map<int, Map<String, dynamic>>> _eventos = {};
 
   @override
   void initState() {
@@ -33,18 +33,22 @@ class _CalendarioState extends State<Calendario> {
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
       print('Dados recebidos: $data');
-      final Map<DateTime, Map<int, String>> novosEventos = {};
+      final Map<DateTime, Map<int, Map<String, dynamic>>> novosEventos = {};
 
       for (var aula in data) {
         final dt = DateTime.parse(aula['data_hora']);
         final key = DateTime(dt.year, dt.month, dt.day);
         final hora = dt.hour;
-        final nome = aula['nome_aluno'] ?? aula['nome_estudante'] ?? '';
+        final name = aula['nome_aluno'] ?? aula['nome_estudante'] ?? '';
+        final id = aula['id'];
 
         if (!novosEventos.containsKey(key)) {
           novosEventos[key] = {};
         }
-        novosEventos[key]![hora] = nome;
+        novosEventos[key]![hora] = {
+          'name': name,
+          'id': id,
+        };
       }
 
       setState(() {
@@ -53,56 +57,6 @@ class _CalendarioState extends State<Calendario> {
     } else {
       print('Erro ao carregar aulas: ${response.statusCode}');
     }
-  }
-
-  void _mostrarDialogoMarcarAula(int horaSelecionada) {
-    final nomeController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Marcar Aula'),
-          content: TextField(
-            controller: nomeController,
-            decoration: const InputDecoration(labelText: 'Nome'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                final nome = nomeController.text.trim();
-                if (nome.isEmpty) return;
-
-                final uri = Uri.parse('http://10.0.2.2:3000/api/aulas');
-                final resp = await http.post(
-                  uri,
-                  headers: {'Content-Type': 'application/json'},
-                  body: jsonEncode({
-                    'email': Session.email,
-                    'nomeAluno': nome,
-                    'data': _selectedDay!.toIso8601String().split('T')[0],
-                    'hora': horaSelecionada.toString(),
-                  }),
-                );
-
-                Navigator.pop(context);
-                if (resp.statusCode == 201) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Aula marcada com sucesso!")),
-                  );
-                  _carregarAulasMarcadas();
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Erro ao marcar aula.")),
-                  );
-                }
-              },
-              child: const Text('Confirmar'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -272,14 +226,17 @@ class _CalendarioState extends State<Calendario> {
                   final hora = 9 + index;
                   final dia = DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
                   final eventosDoDia = _eventos[dia] ?? {};
-                  final nomeAluno = eventosDoDia[hora];
-                  print('Dia: $dia, Hora: $hora, Nome: $nomeAluno');
+                  final evento = eventosDoDia[hora];
+                  final nomeAluno = evento?['name'];
+                  final aulaId = evento?['id'];
+
 
                   final isDomingo = dia.weekday == DateTime.sunday;
                   final isSabado = dia.weekday == DateTime.saturday;
                   final horaForaDoHorarioSabado = isSabado && hora >= 14 && hora <= 19;
-
                   final isHoraBloqueada = isDomingo || horaForaDoHorarioSabado;
+
+                  final foiMarcadoPorEsteAluno = nomeAluno != null && nomeAluno == Session.nome;
 
                   return Container(
                     decoration: isHoraBloqueada
@@ -291,6 +248,44 @@ class _CalendarioState extends State<Calendario> {
                     child: ListTile(
                       title: Text('$hora:00'),
                       subtitle: nomeAluno != null ? Text('Marcado por: $nomeAluno') : null,
+                      trailing: (Session.id_type == 1 && foiMarcadoPorEsteAluno)
+                          ? IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Apagar Aula'),
+                              content: Text('Tem certeza que quer apagar a aula das $hora:00?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+                                TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Apagar')),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true && aulaId != null) {
+                            final uri = Uri.parse('http://10.0.2.2:3000/api/aulas/$aulaId');
+                            final response = await http.delete(uri);
+
+                            if (response.statusCode == 200) {
+                              final json = jsonDecode(response.body);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(json['message'] ?? "Aula apagada com sucesso.")),
+                              );
+                              _carregarAulasMarcadas();
+                            } else {
+                              // Tenta só mostrar o status ou uma mensagem padrão
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Erro ao apagar aula. Verifique a conexão ou tente mais tarde.")),
+                              );
+                              print("Erro ao apagar aula: ${response.statusCode}");
+                              print("Corpo da resposta: ${response.body}");
+                            }
+                          }
+                        },
+                      )
+                          : null,
                     ),
                   );
                 },

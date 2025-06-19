@@ -7,4 +7,5 @@ class Session {
   static String? instrutor;
   static String? veiculo;
   static int? aulas;
+  static int id_type = 1; // 1 = aluno, 2 = instrutor
 }
