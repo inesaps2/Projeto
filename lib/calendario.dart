@@ -88,9 +88,10 @@ class _CalendarioState extends State<Calendario> {
                         int horaSelecionada = 9;
 
                         final isSabado = _selectedDay!.weekday == DateTime.saturday;
+
                         final horasDisponiveis = isSabado
-                            ? [9, 10, 11, 12, 13]
-                            : List.generate(11, (index) => 9 + index); // 9 a 19
+                            ? [9, 10, 11, 12] // remove o 13
+                            : List.generate(11, (index) => 9 + index).where((hora) => hora != 13).toList();
 
                         showDialog(
                           context: context,
@@ -239,7 +240,9 @@ class _CalendarioState extends State<Calendario> {
                   final isDomingo = dia.weekday == DateTime.sunday;
                   final isSabado = dia.weekday == DateTime.saturday;
                   final horaForaDoHorarioSabado = isSabado && hora >= 14 && hora <= 19;
-                  final isHoraBloqueada = isDomingo || horaForaDoHorarioSabado;
+
+                  final isHoraEspecial = hora == 13;
+                  final isHoraBloqueada = isDomingo || horaForaDoHorarioSabado || isHoraEspecial;
 
                   final foiMarcadoPorEsteAluno = nomeAluno != null && nomeAluno == Session.nome;
 
