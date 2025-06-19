@@ -124,84 +124,84 @@ class _CalendarioState extends State<Calendario> {
                     height: 50,
                   ),
                   if (_selectedDay?.weekday != DateTime.sunday)
-                  ElevatedButton(
-                    onPressed: () {
-                      final nomeController = TextEditingController();
-                      int horaSelecionada = 9;
+                    ElevatedButton(
+                      onPressed: () {
+                        final nomeController = TextEditingController();
+                        int horaSelecionada = 9;
 
-                      final isSabado = _selectedDay!.weekday == DateTime.saturday;
-                      final horasDisponiveis = isSabado
-                          ? List.generate(5, (index) => 9 + index)   // 9 a 13
-                          : List.generate(11, (index) => 9 + index); // 9 a 19
+                        final isSabado = _selectedDay!.weekday == DateTime.saturday;
+                        final horasDisponiveis = isSabado
+                            ? List.generate(5, (index) => 9 + index)   // 9 a 13
+                            : List.generate(11, (index) => 9 + index); // 9 a 19
 
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text('Marcar Aula'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TextField(
-                                  controller: nomeController,
-                                  decoration: const InputDecoration(labelText: 'Nome'),
-                                ),
-                                const SizedBox(height: 16),
-                                DropdownButtonFormField<int>(
-                                  value: horaSelecionada,
-                                  decoration: const InputDecoration(labelText: 'Hora'),
-                                  items: horasDisponiveis.map((hora) {
-                                    return DropdownMenuItem<int>(
-                                      value: hora,
-                                      child: Text('$hora:00'),
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: const Text('Marcar Aula'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextField(
+                                    controller: nomeController,
+                                    decoration: const InputDecoration(labelText: 'Nome'),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  DropdownButtonFormField<int>(
+                                    value: horaSelecionada,
+                                    decoration: const InputDecoration(labelText: 'Hora'),
+                                    items: horasDisponiveis.map((hora) {
+                                      return DropdownMenuItem<int>(
+                                        value: hora,
+                                        child: Text('$hora:00'),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      horaSelecionada = value!;
+                                    },
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () async {
+                                    final nome = nomeController.text.trim();
+                                    if (nome.isEmpty) return;
+
+                                    final uri = Uri.parse('http://10.0.2.2:3000/api/aulas');
+                                    final resp = await http.post(
+                                      uri,
+                                      headers: {'Content-Type': 'application/json'},
+                                      body: jsonEncode({
+                                        'email': Session.email,
+                                        'nomeAluno': nome,
+                                        'data': _selectedDay!.toIso8601String().split('T')[0],
+                                        'hora': horaSelecionada.toString(),
+                                      }),
                                     );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    horaSelecionada = value!;
+
+                                    Navigator.pop(context);
+                                    if (resp.statusCode == 201) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("Aula marcada com sucesso!")),
+                                      );
+                                      _carregarAulasMarcadas();
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("Erro ao marcar aula.")),
+                                      );
+                                    }
                                   },
+                                  child: const Text('Confirmar'),
                                 ),
                               ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () async {
-                                  final nome = nomeController.text.trim();
-                                  if (nome.isEmpty) return;
-
-                                  final uri = Uri.parse('http://10.0.2.2:3000/api/aulas');
-                                  final resp = await http.post(
-                                    uri,
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: jsonEncode({
-                                      'email': Session.email,
-                                      'nomeAluno': nome,
-                                      'data': _selectedDay!.toIso8601String().split('T')[0],
-                                      'hora': horaSelecionada.toString(),
-                                    }),
-                                  );
-
-                                  Navigator.pop(context);
-                                  if (resp.statusCode == 201) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text("Aula marcada com sucesso!")),
-                                    );
-                                    _carregarAulasMarcadas();
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text("Erro ao marcar aula.")),
-                                    );
-                                  }
-                                },
-                                child: const Text('Confirmar'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
-                    child: const Text('Marcar Aula'),
-                  ),
+                            );
+                          },
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
+                      child: const Text('Marcar Aula'),
+                    ),
                 ],
               ),
               const SizedBox(height: 20),

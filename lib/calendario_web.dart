@@ -94,7 +94,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   Future<void> _carregarAulasMarcadas() async {
-    final uri = Uri.parse('http://localhost:3000/aulas?email=${Session.email}');
+    final uri = Uri.parse('http://localhost:3000/aulas/recepcionista?email=${Session.email}');
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
@@ -128,7 +128,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   Future<void> _carregarAulasDoInstrutor(String nomeInstrutor) async {
-    final uri = Uri.parse('http://localhost:3000/api/aulas?instrutor=$nomeInstrutor');
+    final uri = Uri.parse('http://localhost:3000/api/aulas/recepcionista?instrutor=$nomeInstrutor');
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
