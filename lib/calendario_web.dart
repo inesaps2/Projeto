@@ -761,9 +761,11 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                       return Container(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                         decoration: BoxDecoration(
-                          color: bloquear
+                          color: (hora == 13)
+                              ? Colors.grey[300] // célula cinzenta para a hora 13
+                              : (bloquear
                               ? Colors.grey[300]
-                              : (aceite ? const Color(0xFFA5D6A7) : null),
+                              : (aceite ? const Color(0xFFB2F2BB) : null)),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
