@@ -27,7 +27,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
 
   int? _idInstrutorSelecionado;
 
-  void onInstrutorSelecionado(int id) {
+  void InstrutorSelecionado(int id) {
     setState(() {
       _idInstrutorSelecionado = id;
     });
@@ -325,12 +325,12 @@ class _CalendarioWebState extends State<CalendarioWeb> {
     );
   }
 
-  void _mostrarDialogoBloquearIntervalo() {
+  void _mostrarDialogoBloquearIntervalo(int idInstrutor) {
     DateTime? dataInicio;
     DateTime? dataFim;
     int horaInicio = 9;
     int horaFim = 19;
-    String motivoSelecionado = 'Exame'; // Valor padrão
+    String motivoSelecionado = 'exame'; // Valor padrão
 
     showDialog(
       context: context,
@@ -349,7 +349,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                     DropdownButton<String>(
                       value: motivoSelecionado,
                       isExpanded: true,
-                      items: ['Exame', 'Férias', 'Outro'].map((motivo) {
+                      items: ['exame', 'ferias', 'outro'].map((motivo) {
                         return DropdownMenuItem<String>(
                           value: motivo,
                           child: Text(motivo),
@@ -484,7 +484,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                   child: const Text('Cancelar'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (dataInicio == null || dataFim == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Por favor, selecione o intervalo de datas.')),
@@ -498,9 +498,33 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                       return;
                     }
 
-                    // Aqui pode enviar para backend ou processar localmente
+                    final dataHoraInicio = DateTime(
+                      dataInicio!.year,
+                      dataInicio!.month,
+                      dataInicio!.day,
+                      horaInicio,
+                    );
+
+                    final dataHoraFim = DateTime(
+                      dataFim!.year,
+                      dataFim!.month,
+                      dataFim!.day,
+                      horaFim,
+                    );
+
                     print('Motivo: $motivoSelecionado');
-                    print('De $dataInicio a $dataFim, das $horaInicio às $horaFim');
+                    print('De $dataHoraInicio a $dataHoraFim');
+
+                    await bloquearHorario(
+                      idInstrutor: idInstrutor, // <- Certifica-te que esta variável existe no escopo
+                      dataInicio: dataHoraInicio,
+                      dataFim: dataHoraFim,
+                      motivo: motivoSelecionado,
+                    );
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Bloqueio enviado com sucesso!')),
+                    );
 
                     Navigator.pop(context);
                   },
@@ -512,6 +536,29 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         );
       },
     );
+  }
+
+  Future<void> bloquearHorario({
+    required int idInstrutor,
+    required DateTime dataInicio,
+    required DateTime dataFim,
+    required String motivo, // usar "ferias", "exame" ou "outro"
+  }) async {
+    final uri = Uri.parse('http://localhost:3000/api/aulas/bloquear-horario');
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'id_instrutor': idInstrutor,
+        'date_start': dataInicio.toIso8601String(),
+        'date_end': dataFim.toIso8601String(),
+        'reason': motivo,
+      }),
+    );
+
+    print('Status: ${response.statusCode}');
+    print('Body: ${response.body}');
   }
 
   @override
@@ -637,7 +684,15 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                     ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _mostrarDialogoBloquearIntervalo,
+                    onPressed: () {
+                      if (_idInstrutorSelecionado != null) {
+                        _mostrarDialogoBloquearIntervalo(_idInstrutorSelecionado!);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Por favor, selecione um instrutor.')),
+                        );
+                      }
+                    },
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                     child: const Text('Bloquear Horas'),
                   ),
