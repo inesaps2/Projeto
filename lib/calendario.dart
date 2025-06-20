@@ -146,12 +146,16 @@ class _CalendarioState extends State<Calendario> {
                                       );
                                       _carregarAulasMarcadas();
                                     } else {
+                                      final errorMessage = jsonDecode(resp.body)?['error'] ?? 'Erro ao marcar aula';
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("Erro ao marcar aula.")),
+                                        SnackBar(
+                                          content: Text(errorMessage),
+                                          backgroundColor: Colors.red,
+                                        ),
                                       );
                                     }
                                   },
-                                  child: const Text('Confirmar'),
+                                    child: const Text('Confirmar'),
                                 ),
                               ],
                             );

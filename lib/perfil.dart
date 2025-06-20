@@ -107,20 +107,32 @@ class _PerfilState extends State<Perfil> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Nome: ${Session.nome ?? "X"}', style: const TextStyle(fontSize: 18)),
+                Text('Nome: ${Session.nome ?? "X"}',
+                    style: const TextStyle(fontSize: 18)),
                 const SizedBox(height: 5),
-                Text('Email: ${Session.email ?? "X@gmail.com"}', style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 5),
-                Text('Categoria: ${Session.categoria ?? 'A definir'}', style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 5),
-                Text('Instrutor: ${Session.instructor ?? 'A definir'}', style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 5),
-                Text('Veículo: ${Session.veiculo ?? 'A definir'}', style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 5),
-                Text('Aulas: ${Session.aulas ?? 'X'}', style: const TextStyle(fontSize: 18)),
+                Text('Email: ${Session.email ?? "X@gmail.com"}',
+                    style: const TextStyle(fontSize: 18)),
                 const SizedBox(height: 5),
 
-                // Botão para alterar password
+                // Mostrar só se for aluno (id_type == 1)
+                if (Session.id_type == 1) ...[
+                  Text('Categoria: ${Session.categoria ?? 'A definir'}',
+                      style: const TextStyle(fontSize: 18)),
+                  Text('Instrutor: ${Session.instructor ?? 'A definir'}',
+                      style: const TextStyle(fontSize: 18)),
+                  Text('Veículo: ${Session.veiculo ?? 'A definir'}',
+                      style: const TextStyle(fontSize: 18)),
+                  Text('Aulas: ${Session.aulas ?? 'X'}',
+                      style: const TextStyle(fontSize: 18)),
+                ],
+
+                // Mostrar só se for instrutor (id_type == 2)
+                if (Session.id_type == 2) ...[
+                  Text('Veículo: ${Session.veiculo ?? 'A definir'}',
+                      style: const TextStyle(fontSize: 18)),
+                ],
+
+          // Botão para alterar password
                 Center(
                   child: ElevatedButton(
                     onPressed: () => _mostrarDialogoAlterarPassword(),
