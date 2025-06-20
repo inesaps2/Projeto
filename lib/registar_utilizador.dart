@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:projeto/main.dart';
+import 'package:projeto/pagina_inicial_web.dart';
+import 'package:projeto/perfil_web.dart';
 import 'calendario_web.dart';
 
 class RegistarUtilizador extends StatefulWidget {
@@ -22,9 +25,12 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
   final TextEditingController nomeAlunoController = TextEditingController();
   final TextEditingController emailAlunoController = TextEditingController();
   final TextEditingController passwordAlunoController = TextEditingController();
+  final TextEditingController veiculoAlunoController = TextEditingController();
   String? categoriaSelecionada;
   String? instrutorSelecionado;
   final List<String> categorias = ['A', 'B', 'C', 'D'];
+  final List<String> veiculos = ['Opel Corsa', 'Kia Rio', 'Kia Stonic', 'BMW'];
+  String? veiculoSelecionado;
   List<String> instrutoresExistentes = [];
 
   // Instrutor controllers
@@ -40,6 +46,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
     nomeInstrutorController.dispose();
     emailInstrutorController.dispose();
     passwordInstrutorController.dispose();
+    veiculoAlunoController.dispose();
     super.dispose();
   }
 
@@ -59,6 +66,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
       print('Password: ${passwordAlunoController.text}');
       print('Categoria: $categoriaSelecionada');
       print('Instrutor: $instrutorSelecionado');
+      print('Veículo: $veiculoAlunoController');
       print('id_type: 1');
 
       final response = await http.post(
@@ -70,6 +78,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
           'password': passwordAlunoController.text,
           'category': categoriaSelecionada,
           'instructor': instrutorSelecionado,
+          'associated_car': veiculoSelecionado,
           'id_type': 1, // id_type fixo para aluno
         }),
       );
@@ -160,7 +169,19 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
             IconButton(
               icon: const Icon(Icons.account_circle),
               onPressed: () {
-                // ação perfil
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PerfilWeb()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.login_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyApp())
+                );
               },
             ),
           ],
@@ -236,35 +257,40 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
               ),
 
               const SizedBox(height: 30),
-              // Painel informativo abaixo dos botões
-              Card(
-                elevation: 4,
-                margin: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Informações Gerais',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      Text('👨‍🏫 Número de instrutores: ${instrutoresExistentes.length}'),
-                      Text('📅 Aulas pendentes: ...'),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Instrutores registados:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      ...instrutoresExistentes.map((name) => Text('- $name')).toList(),
-                    ],
+              if (!showRegisterAlunoFields && !showRegisterInstrutorFields && !showCalendar)
+                Card(
+                  elevation: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Número de instrutores: ${instrutoresExistentes.length}'),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-
+              if (!showRegisterAlunoFields && !showRegisterInstrutorFields && !showCalendar)
+                Column(
+                  children: [
+                    Card(
+                      // seu cartão atual aqui
+                    ),
+                    InformacoesDetalhadas(
+                      instrutores: instrutoresExistentes,
+                      horariosAulas: [
+                        'Segunda-feira: 14:00 - 15:00 / 17:00 - 18:00 / 18:00 - 19:00',
+                        'Terça-feira: 14:00 - 15:00 / 17:00 - 18:00',
+                        'Quarta-feira: 14:00 - 15:00 / 17:00 - 18:00 / 18:00 - 19:00',
+                        'Quinta-feira: 14:00 - 15:00 / 17:00 - 18:00',
+                        'Sexta-feira: 14:00 - 15:00 / 17:00 - 18:00 / 19:00 - 20:00',
+                        'Sábado: 10:00 - 11:00',
+                      ],
+                    ),
+                  ],
+                ),
 
               // Formulário Aluno
               if (showRegisterAlunoFields)
@@ -337,6 +363,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                           return null;
                         },
                       ),
+                      const SizedBox(height: 12),
 
                       const Text('Categoria'),
                       DropdownButtonFormField<String>(
@@ -366,15 +393,49 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                       const SizedBox(height: 12),
 
                       const Text('Instrutor'),
-                      TextFormField(
+                      DropdownButtonFormField<String>(
+                        value: instrutorSelecionado,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                         ),
+                        items: instrutoresExistentes
+                            .map((instrutor) => DropdownMenuItem(
+                          value: instrutor,
+                          child: Text(instrutor),
+                        ))
+                            .toList(),
                         onChanged: (val) {
-                          instrutorSelecionado = val;
+                          setState(() {
+                            instrutorSelecionado = val;
+                          });
                         },
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
+                          if (value == null || value.isEmpty) {
+                            return '*Campo obrigatório';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('Veículo'),
+                      DropdownButtonFormField<String>(
+                        value: veiculoSelecionado,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
+                        items: veiculos
+                            .map((veiculo) => DropdownMenuItem(
+                          value: veiculo,
+                          child: Text(veiculo),
+                        ))
+                            .toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            veiculoSelecionado = val;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
                             return '*Campo obrigatório';
                           }
                           return null;
@@ -394,14 +455,6 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                           child: const Text('Registar Aluno'),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Instrutores registados:',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      ...instrutoresExistentes.map((name) => Text('- $name')).toList(),
-
                     ],
                   ),
                 ),
@@ -509,6 +562,87 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class InformacoesDetalhadas extends StatelessWidget {
+  final List<String> instrutores;
+  final List<String> horariosAulas;
+
+  const InformacoesDetalhadas({
+    Key? key,
+    required this.instrutores,
+    required this.horariosAulas,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+          // Lista de Instrutores
+          const Text(
+            'Instrutores:',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ...instrutores.map((instrutor) {
+            return ListTile(
+              leading: const Icon(Icons.person),
+              title: Text(instrutor),
+            );
+          }).toList(),
+
+          const SizedBox(height: 24),
+
+          // Horários das aulas
+          const Text(
+            'Horário das Aulas de Código:',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ...horariosAulas.map((linha) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2.0),
+            child: Text(linha),
+          )),
+
+          const SizedBox(height: 30),
+
+          // Rodapé azul com informações da escola
+          Container(
+            width: double.infinity,
+            color: const Color(0xFF16ADC2),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Informações da Escola:',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                SizedBox(height: 8),
+                Text('Horário de funcionamento:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                Text('Segunda a Sexta: 09h00 - 20h00', style: TextStyle(color: Colors.white)),
+                Text('Segunda a Sexta: 09h00 - 20h00', style: TextStyle(color: Colors.white)),
+                Text('Sábado: 09h00 - 13h00', style: TextStyle(color: Colors.white)),
+                Text('Domingo: Fechado', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 12),
+                Text('Contacto:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                Text('271 023 755', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 12),
+                Text('Endereço:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                Text('Rua Dr, Francisco Piçarra de Matos 7 - Cave, 6300-693 Guarda', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 40),
+        ],
       ),
     );
   }

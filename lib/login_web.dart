@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:projeto/registar_utilizador.dart';
+import 'package:projeto/teste.dart';
 
 class LoginWeb extends StatefulWidget {
   const LoginWeb({super.key});
@@ -35,6 +36,8 @@ class _LoginWebState extends State<LoginWeb> {
         final idType = int.tryParse(data['user']['id_type'].toString()) ?? 0;
 
         if (idType == 3) {
+          Session.nome = data['user']['name'];
+          Session.email = data['user']['email'];
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const RegistarUtilizador()),

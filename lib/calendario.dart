@@ -18,6 +18,9 @@ class _CalendarioState extends State<Calendario> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   Map<DateTime, Map<int, Map<String, dynamic>>> _eventos = {};
+  // === Horários bloqueados do instrutor ===
+  final Map<String, Map<String, dynamic>> _horariosBloqueados = {};
+  int? _idInstrutor;
 
   @override
   void initState() {
@@ -42,6 +45,11 @@ class _CalendarioState extends State<Calendario> {
         final name = aula['nome_aluno'] ?? aula['nome_estudante'] ?? '';
         final id = aula['id'];
         final status = aula['class_status'] ?? 'pendente';
+        // Recolhe o id do instrutor (necessário para horários bloqueados)
+        final idInstrutor = aula['id_instructor'];
+        if (_idInstrutor == null && idInstrutor != null) {
+          _idInstrutor = idInstrutor;
+        }
 
         if (!novosEventos.containsKey(key)) {
           novosEventos[key] = {};
@@ -56,9 +64,87 @@ class _CalendarioState extends State<Calendario> {
       setState(() {
         _eventos = novosEventos;
       });
+      // Carrega horários bloqueados se ainda não estiverem carregados
+      if (_idInstrutor != null && _horariosBloqueados.isEmpty) {
+        await _carregarHorariosBloqueados();
+      }
     } else {
       print('Erro ao carregar aulas: ${response.statusCode}');
     }
+  }
+
+  // ================= BLOQUEIOS =================
+
+  String _gerarChaveDia(DateTime d) {
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _carregarHorariosBloqueados() async {
+    if (_idInstrutor == null) return;
+    try {
+      final url = 'http://10.0.2.2:3000/api/blocked-schedules?instructorId=$_idInstrutor';
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final List blocos = jsonDecode(response.body);
+        final Map<String, Map<String, dynamic>> novosBloqueios = {};
+        for (var bloco in blocos) {
+          try {
+            final dataInicio = DateTime.parse(bloco['date_start']).toLocal();
+            final dataFim = DateTime.parse(bloco['date_end']).toLocal();
+            final motivo = bloco['reason'] ?? 'indefinido';
+
+            DateTime dataAtual = DateTime(dataInicio.year, dataInicio.month, dataInicio.day);
+            while (!dataAtual.isAfter(DateTime(dataFim.year, dataFim.month, dataFim.day))) {
+              final chaveData = _gerarChaveDia(dataAtual);
+
+              final mesmoDia = dataAtual.year == dataInicio.year && dataAtual.month == dataInicio.month && dataAtual.day == dataInicio.day &&
+                  dataAtual.year == dataFim.year && dataAtual.month == dataFim.month && dataAtual.day == dataFim.day;
+
+              final primeiroDia = dataAtual.year == dataInicio.year && dataAtual.month == dataInicio.month && dataAtual.day == dataInicio.day;
+              final ultimoDia = dataAtual.year == dataFim.year && dataAtual.month == dataFim.month && dataAtual.day == dataFim.day;
+
+              if (mesmoDia) {
+                for (var h = dataInicio.hour; h < dataFim.hour; h++) {
+                  novosBloqueios.putIfAbsent(chaveData, () => {})[h.toString()] = motivo;
+                }
+              } else if (primeiroDia) {
+                for (var h = dataInicio.hour; h < 24; h++) {
+                  novosBloqueios.putIfAbsent(chaveData, () => {})[h.toString()] = motivo;
+                }
+              } else if (ultimoDia) {
+                for (var h = 0; h < dataFim.hour; h++) {
+                  novosBloqueios.putIfAbsent(chaveData, () => {})[h.toString()] = motivo;
+                }
+              } else {
+                novosBloqueios[chaveData] = {'fullDay': true, 'reason': motivo};
+              }
+
+              dataAtual = dataAtual.add(const Duration(days: 1));
+            }
+          } catch (e) {
+            print('Erro ao processar bloco $bloco: $e');
+          }
+        }
+        setState(() {
+          _horariosBloqueados
+            ..clear()
+            ..addAll(novosBloqueios);
+        });
+      } else {
+        print('Erro ao obter bloqueios: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Erro na requisição de bloqueios: $e');
+    }
+  }
+
+  bool _estaBloqueado(DateTime data, int hora) {
+    if (_horariosBloqueados.isEmpty) return false;
+    final chave = _gerarChaveDia(data);
+    final bloqueiosDia = _horariosBloqueados[chave];
+    if (bloqueiosDia == null) return false;
+    if (bloqueiosDia['fullDay'] == true) return true;
+    return bloqueiosDia[hora.toString()] != null;
   }
 
   @override
@@ -79,9 +165,7 @@ class _CalendarioState extends State<Calendario> {
                     width: 150,
                     height: 50,
                   ),
-                  if (_selectedDay != null &&
-                      _selectedDay!.weekday != DateTime.sunday &&
-                      !(_selectedDay!.weekday == DateTime.saturday && DateTime.now().hour >= 14))
+                  if (_selectedDay != null)
                     ElevatedButton(
                       onPressed: () {
                         final nomeController = TextEditingController();
@@ -126,6 +210,16 @@ class _CalendarioState extends State<Calendario> {
                                   onPressed: () async {
                                     final nome = nomeController.text.trim();
                                     if (nome.isEmpty) return;
+                                    // Verifica se o horário está bloqueado
+                                    if (_estaBloqueado(_selectedDay!, horaSelecionada)) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Este horário está bloqueado e não pode ser agendado.'),
+                                          backgroundColor: Colors.orange,
+                                        ),
+                                      );
+                                      return;
+                                    }
 
                                     final uri = Uri.parse('http://10.0.2.2:3000/api/aulas');
                                     final resp = await http.post(
@@ -146,12 +240,8 @@ class _CalendarioState extends State<Calendario> {
                                       );
                                       _carregarAulasMarcadas();
                                     } else {
-                                      final errorMessage = jsonDecode(resp.body)?['error'] ?? 'Erro ao marcar aula';
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(errorMessage),
-                                          backgroundColor: Colors.red,
-                                        ),
+                                        const SnackBar(content: Text("Erro ao marcar aula.")),
                                       );
                                     }
                                   },
@@ -246,14 +336,17 @@ class _CalendarioState extends State<Calendario> {
                   final horaForaDoHorarioSabado = isSabado && hora >= 14 && hora <= 19;
 
                   final isHoraEspecial = hora == 13;
-                  final isHoraBloqueada = isDomingo || horaForaDoHorarioSabado || isHoraEspecial;
+                  final isHoraBloqueadaDefault = isDomingo || horaForaDoHorarioSabado || isHoraEspecial;
+
+                  final bool isBloqueadoBackend = _estaBloqueado(dia, hora);
+                  final bool isHoraBloqueada = isHoraBloqueadaDefault || isBloqueadoBackend;
 
                   final foiMarcadoPorEsteAluno = nomeAluno != null && nomeAluno == Session.nome;
 
                   Color? backgroundColor;
 
                   if (isHoraBloqueada) {
-                    backgroundColor = Colors.grey[300];
+                    backgroundColor = isBloqueadoBackend ? Colors.orange[100] : Colors.grey[300];
                   } else if (Session.id_type == 1 && foiMarcadoPorEsteAluno && status == 'aceite') {
                     backgroundColor = Colors.green[300]; // Verde claro para aulas aceites do aluno
                   }
@@ -268,6 +361,9 @@ class _CalendarioState extends State<Calendario> {
                       subtitle: nomeAluno != null ? Text('Marcado por: $nomeAluno') : null,
                       trailing: Builder(
                         builder: (context) {
+                          if (isHoraBloqueada) {
+                            return const Icon(Icons.lock_outline, color: Colors.orange);
+                          }
                           if (aulaId == null) return const SizedBox.shrink();
 
                           if (Session.id_type == 1 && foiMarcadoPorEsteAluno) {
@@ -402,12 +498,12 @@ class _CalendarioState extends State<Calendario> {
   Widget _buildNavIcon({required IconData icon, required int index, required int currentIndex}) {
     final bool isSelected = index == currentIndex;
     return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.white24 : Colors.transparent,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon),
-    );
-  }
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white24 : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon),
+        );
+    }
 }
