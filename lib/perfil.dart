@@ -32,7 +32,7 @@ class _PerfilState extends State<Perfil> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('⚠️ Aviso de Segurança'),
+        title: const Text('Aviso de Segurança'),
         content: const Text('Altere a password para a sua segurança.'),
         actions: [
           TextButton(
@@ -107,17 +107,18 @@ class _PerfilState extends State<Perfil> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Nome: ${Session.nome ?? "X"}',
-                    style: const TextStyle(fontSize: 18)),
+                Text('Nome: ${Session.nome ?? "X"}', style: const TextStyle(fontSize: 18)),
                 const SizedBox(height: 5),
-                Text('Email: ${Session.email ?? "X@gmail.com"}',
-                    style: const TextStyle(fontSize: 18)),
+                Text('Email: ${Session.email ?? "X@gmail.com"}', style: const TextStyle(fontSize: 18)),
                 const SizedBox(height: 5),
-                Text('Categoria: ${Session.categoria ?? 'A definir'}'),
-                Text('Instrutor: ${Session.instrutor ?? 'A definir'}'),
-                Text('Veículo: ${Session.veiculo ?? 'A definir'}'),
-                Text('Aulas: ${Session.aulas ?? '0/32'}'),
-                const SizedBox(height: 20),
+                Text('Categoria: ${Session.categoria ?? 'A definir'}', style: const TextStyle(fontSize: 18)),
+                const SizedBox(height: 5),
+                Text('Instrutor: ${Session.instructor ?? 'A definir'}', style: const TextStyle(fontSize: 18)),
+                const SizedBox(height: 5),
+                Text('Veículo: ${Session.veiculo ?? 'A definir'}', style: const TextStyle(fontSize: 18)),
+                const SizedBox(height: 5),
+                Text('Aulas: ${Session.aulas ?? 'X'}', style: const TextStyle(fontSize: 18)),
+                const SizedBox(height: 5),
 
                 // Botão para alterar password
                 Center(

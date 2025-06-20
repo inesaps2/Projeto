@@ -44,11 +44,12 @@ class _LoginMobileState extends State<LoginMobile> {
         Session.password = password;
         Session.nome = user['name'];
         Session.categoria = user['categoria'];
-        Session.instrutor = user['instrutor'];
+        Session.instructor = user['instructor'] ?? 'A definir';
         Session.veiculo = user['veiculo'];
         Session.aulas = user['aulas'];
         Session.primeiroLogin = user['primeiro_login'];
         Session.id_type = user['id_type'];
+        Session.aulas = user['aulas'];
 
         print("✅ Login com sucesso: ${user['name']}");
         print("🟡 primeiro_login = ${Session.primeiroLogin}");
