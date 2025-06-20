@@ -155,7 +155,7 @@ class _CalendarioState extends State<Calendario> {
                                       );
                                     }
                                   },
-                                    child: const Text('Confirmar'),
+                                  child: const Text('Confirmar'),
                                 ),
                               ],
                             );

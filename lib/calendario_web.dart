@@ -24,14 +24,148 @@ String gerarChaveDiaHora(DateTime data, int hora) {
 
 class _CalendarioWebState extends State<CalendarioWeb> {
   final TextEditingController _instrutorController = TextEditingController();
-
+  final Map<String, Map<String, dynamic>> _horariosBloqueados = {};
   int? _idInstrutorSelecionado;
 
   void InstrutorSelecionado(int id) {
+    print('InstrutorSelecionado: Instrutor com id $id selecionado');
+
+    // Limpa os horários bloqueados antigos
     setState(() {
+      _horariosBloqueados.clear();
       _idInstrutorSelecionado = id;
     });
-    print('Instrutor selecionado com id: $_idInstrutorSelecionado');
+
+    print('InstrutorSelecionado: ID do instrutor atualizado para: $_idInstrutorSelecionado');
+    _carregarHorariosBloqueados();
+  }
+
+  Future<void> _carregarHorariosBloqueados() async {
+    if (_idInstrutorSelecionado == null) {
+      print('ID do instrutor não definido, não é possível carregar horários bloqueados');
+      return;
+    }
+
+    print('=== INÍCIO _carregarHorariosBloqueados ===');
+    print('Carregando horários bloqueados para o instrutor $_idInstrutorSelecionado');
+
+    try {
+      final url = 'http://localhost:3000/api/blocked-schedules?instructorId=$_idInstrutorSelecionado';
+      print('URL da requisição: $url');
+
+      final response = await http.get(Uri.parse(url));
+
+      print('Resposta da API de horários bloqueados:');
+      print('Status Code: ${response.statusCode}');
+      print('Headers: ${response.headers}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        print('Erro na API: ${response.statusCode} - ${response.body}');
+        return;
+      }
+
+      if (response.statusCode == 200) {
+        final List<dynamic> blocos = jsonDecode(response.body);
+        print('Blocos recebidos: ${blocos.length}');
+
+        final Map<String, Map<String, dynamic>> novosBloqueios = {};
+
+        for (var bloco in blocos) {
+          try {
+            final dataInicio = DateTime.parse(bloco['date_start']).toLocal();
+            final dataFim = DateTime.parse(bloco['date_end']).toLocal();
+            final motivo = bloco['reason'] ?? 'indefinido';
+
+            print('Bloco de ${dataInicio} até ${dataFim} - Motivo: $motivo');
+
+            // Para cada dia no intervalo
+            var dataAtual = DateTime(dataInicio.year, dataInicio.month, dataInicio.day);
+            final dataFimAjustada = DateTime(dataFim.year, dataFim.month, dataFim.day).add(const Duration(days: 1));
+
+            while (dataAtual.isBefore(dataFimAjustada)) {
+              final chaveData = '${dataAtual.year}-${dataAtual.month.toString().padLeft(2, '0')}-${dataAtual.day.toString().padLeft(2, '0')}';
+
+              // Se for o mesmo dia, verifica as horas
+              if (dataInicio.year == dataFim.year &&
+                  dataInicio.month == dataFim.month &&
+                  dataInicio.day == dataFim.day) {
+                // Bloqueia apenas no intervalo de horas específico
+                for (var h = dataInicio.hour; h < dataFim.hour; h++) {
+                  novosBloqueios.putIfAbsent(chaveData, () => {})[h.toString()] = motivo;
+                  print('  - Bloqueado $chaveData às $h:00 - Motivo: $motivo');
+                }
+              } else if (dataAtual.isAtSameMomentAs(DateTime(dataInicio.year, dataInicio.month, dataInicio.day))) {
+                // Primeiro dia do bloco
+                for (var h = dataInicio.hour; h < 24; h++) {
+                  novosBloqueios.putIfAbsent(chaveData, () => {})[h.toString()] = motivo;
+                  print('  - Bloqueado $chaveData às $h:00 (primeiro dia) - Motivo: $motivo');
+                }
+              } else if (dataAtual.isAtSameMomentAs(DateTime(dataFim.year, dataFim.month, dataFim.day))) {
+                // Último dia do bloco
+                for (var h = 0; h < dataFim.hour; h++) {
+                  novosBloqueios.putIfAbsent(chaveData, () => {})[h.toString()] = motivo;
+                  print('  - Bloqueado $chaveData às $h:00 (último dia) - Motivo: $motivo');
+                }
+              } else {
+                // Dias intermediários (bloqueia o dia inteiro)
+                novosBloqueios[chaveData] = {'fullDay': true, 'reason': motivo};
+                print('  - Bloqueado dia inteiro: $chaveData - Motivo: $motivo');
+              }
+
+              dataAtual = dataAtual.add(const Duration(days: 1));
+            }
+          } catch (e) {
+            print('Erro ao processar bloco $bloco: $e');
+          }
+        }
+
+        print('Total de dias com horários bloqueados: ${novosBloqueios.length}');
+
+        setState(() {
+          _horariosBloqueados.clear();
+          _horariosBloqueados.addAll(novosBloqueios);
+        });
+      } else {
+        print('Erro na API: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Erro ao carregar horários bloqueados: $e');
+    }
+  }
+
+  bool _estaBloqueado(DateTime data, int hora) {
+    if (_horariosBloqueados.isEmpty) {
+      print('_estaBloqueado(${data.toString()}, $hora): Nenhum horário bloqueado carregado');
+      return false;
+    }
+
+    final chaveData = '${data.year}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
+    print('_estaBloqueado: Verificando chaveData: $chaveData, hora: $hora');
+
+    final bloqueiosDoDia = _horariosBloqueados[chaveData];
+
+    if (bloqueiosDoDia == null) {
+      print('_estaBloqueado: Nenhum bloqueio para esta data');
+      return false;
+    }
+
+    // Se for um bloqueio de dia inteiro
+    if (bloqueiosDoDia['fullDay'] == true) {
+      final motivo = bloqueiosDoDia['reason'] ?? 'sem motivo especificado';
+      print('_estaBloqueado: Dia inteiro bloqueado - Motivo: $motivo');
+      return true;
+    }
+
+    // Se for um bloqueio por hora específica
+    final horaBloqueada = bloqueiosDoDia[hora.toString()];
+    if (horaBloqueada != null) {
+      print('_estaBloqueado: Hora $hora bloqueada - Motivo: $horaBloqueada');
+      return true;
+    }
+
+    print('_estaBloqueado: Hora $hora não está bloqueada');
+    return false;
   }
 
   DateTime _focusedDay = DateTime.now();
@@ -61,12 +195,21 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         if (data != null && data['existe'] == true) {
           final id_instructor = data['id'];  // pega o id do instrutor
           print('Instrutor selecionado com id: $id_instructor');
+
+          bool idMudou = _idInstrutorSelecionado != id_instructor;
+
           setState(() {
             _idInstrutorSelecionado = id_instructor;  // atualiza o estado com o id
           });
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Instrutor "$nomeInstrutor" encontrado!')),
           );
+
+          if (idMudou) {
+            await _carregarHorariosBloqueados();
+          }
+
           await _carregarAulasDoInstrutor(nomeInstrutor);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -149,12 +292,18 @@ class _CalendarioWebState extends State<CalendarioWeb> {
       print('Aulas do instrutor recebidas: $data');
 
       // Pegar id do instrutor da primeira aula, se existir
-      if (data.isNotEmpty && _idInstrutorSelecionado == null) {
+      if (data.isNotEmpty) {
         final primeiroId = data.first['id_instructor'];
-        setState(() {
-          _idInstrutorSelecionado = primeiroId;
-        });
-        print('ID do instrutor definido a partir das aulas: $primeiroId');
+        bool idMudou = _idInstrutorSelecionado != primeiroId;
+
+        if (idMudou) {
+          setState(() {
+            _idInstrutorSelecionado = primeiroId;
+          });
+          // Carrega os horários bloqueados após definir o ID do instrutor
+          _carregarHorariosBloqueados();
+          print('ID do instrutor definido a partir das aulas: $primeiroId');
+        }
       }
 
       final Map<DateTime, Map<int, Map<String, dynamic>>> novosEventos = {};
@@ -278,6 +427,17 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   void _mostrarDialogoMarcarAula(int horaSelecionada) {
     final nomeController = TextEditingController();
 
+    // Verifica se o horário está bloqueado
+    if (_selectedDay != null && _estaBloqueado(_selectedDay!, horaSelecionada)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Este horário está bloqueado e não pode ser agendado.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) {
@@ -292,6 +452,18 @@ class _CalendarioWebState extends State<CalendarioWeb> {
               onPressed: () async {
                 final nome = nomeController.text.trim();
                 if (nome.isEmpty) return;
+
+                // Verifica novamente se o horário ainda não foi bloqueado
+                if (_selectedDay != null && _estaBloqueado(_selectedDay!, horaSelecionada)) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Este horário foi bloqueado recentemente e não pode mais ser agendado.'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
 
                 final uri = Uri.parse('http://localhost:3000/api/aulas');
                 final resp = await http.post(
@@ -312,8 +484,12 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                   );
                   _carregarAulasMarcadas();
                 } else {
+                  final errorMessage = jsonDecode(resp.body)?['error'] ?? 'Erro ao marcar aula';
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Erro ao marcar aula.")),
+                    SnackBar(
+                      content: Text(errorMessage),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               },
@@ -564,329 +740,376 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF16ADC2),
-        title: const Text('Calendário'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const RegistarUtilizador()),
-            );
-          },
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF16ADC2),
+          title: const Text('Calendário'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const RegistarUtilizador()),
+              );
+            },
+          ),
         ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: _instrutorController,
-                decoration: const InputDecoration(
-                  labelText: 'Nome do Instrutor',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: _verificarInstrutor,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[700]),
-                    child: const Text('Ver Horário'),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _instrutorController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome do Instrutor',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
                   ),
-                  const SizedBox(width: 8),
-                  // Aqui: só mostra o botão se o dia selecionado não for domingo
-                  if (_selectedDay == null || _selectedDay!.weekday != DateTime.sunday)
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: _verificarInstrutor,
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[700]),
+                      child: const Text('Ver Horário'),
+                    ),
+                    const SizedBox(width: 8),
+                    // Aqui: só mostra o botão se o dia selecionado não for domingo
+                    if (_selectedDay == null || _selectedDay!.weekday != DateTime.sunday)
+                      ElevatedButton(
+                        onPressed: () {
+                          final nomeController = TextEditingController();
+                          int horaSelecionada = 9;
+
+                          List<int> horasDisponiveis;
+                          if (_selectedDay != null && _selectedDay!.weekday == DateTime.saturday) {
+                            horasDisponiveis = [9, 10, 11, 12]; // removeu o 13
+                          } else {
+                            horasDisponiveis = List.generate(11, (index) => 9 + index).where((hora) => hora != 13).toList();
+                          }
+
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text('Marcar Aula'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TextField(
+                                      controller: nomeController,
+                                      decoration: const InputDecoration(labelText: 'Nome'),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    DropdownButtonFormField<int>(
+                                      value: horaSelecionada,
+                                      decoration: const InputDecoration(labelText: 'Hora'),
+                                      items: horasDisponiveis.map((hora) {
+                                        return DropdownMenuItem<int>(
+                                          value: hora,
+                                          child: Text('$hora:00'),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        horaSelecionada = value!;
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () async {
+                                      final nome = nomeController.text.trim();
+                                      if (nome.isEmpty || _selectedDay == null) return;
+
+                                      final uri = Uri.parse('http://localhost:3000/api/aulas');
+                                      final resp = await http.post(
+                                        uri,
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: jsonEncode({
+                                          'email': Session.email,
+                                          'nomeAluno': nome,
+                                          'data': _selectedDay!.toIso8601String().split('T')[0],
+                                          'hora': horaSelecionada.toString(),
+                                        }),
+                                      );
+
+                                      Navigator.pop(context);
+                                      if (resp.statusCode == 201) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text("Aula marcada com sucesso!")),
+                                        );
+                                        _carregarAulasMarcadas();
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text("Erro ao marcar aula.")),
+                                        );
+                                      }
+                                    },
+                                    child: const Text('Confirmar'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
+                        child: const Text('Marcar Aula'),
+                      ),
+                    const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: () {
-                        final nomeController = TextEditingController();
-                        int horaSelecionada = 9;
-
-                        List<int> horasDisponiveis;
-                        if (_selectedDay != null && _selectedDay!.weekday == DateTime.saturday) {
-                          horasDisponiveis = [9, 10, 11, 12]; // removeu o 13
+                        if (_idInstrutorSelecionado != null) {
+                          _mostrarDialogoBloquearIntervalo(_idInstrutorSelecionado!);
                         } else {
-                          horasDisponiveis = List.generate(11, (index) => 9 + index).where((hora) => hora != 13).toList();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Por favor, selecione um instrutor.')),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                      child: const Text('Bloquear Horas'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Lógica para bloquear dias
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
+                      child: const Text('Bloquear Dias'),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Recarregar horários bloqueados',
+                      child: IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: _idInstrutorSelecionado != null
+                            ? () {
+                          print('Recarregando horários bloqueados manualmente...');
+                          _carregarHorariosBloqueados();
+                        }
+                            : null,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                TableCalendar(
+                  firstDay: DateTime.utc(2020, 1, 1),
+                  lastDay: DateTime.utc(2030, 12, 31),
+                  focusedDay: _focusedDay,
+                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                  onDaySelected: (selectedDay, focusedDay) {
+                    print('Dia selecionado: $selectedDay');
+                    setState(() {
+                      _selectedDay = selectedDay;
+                      _focusedDay = focusedDay;
+                    });
+
+                    // Força a recarga dos horários bloqueados para o dia selecionado
+                    if (_idInstrutorSelecionado != null) {
+                      print('Recarregando horários bloqueados para o dia selecionado...');
+                      _carregarHorariosBloqueados();
+                    }
+                  },
+                  locale: 'pt_PT',
+                  eventLoader: (day) {
+                    final dia = DateTime(day.year, day.month, day.day);
+                    return _eventos.containsKey(dia) ? [1] : [];
+                  },
+                  calendarBuilders: CalendarBuilders(
+                    markerBuilder: (context, day, events) {
+                      if (events.isNotEmpty) {
+                        return Positioned(
+                          bottom: 1,
+                          child: Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        );
+                      }
+                      return null;
+                    },
+                    defaultBuilder: (context, day, focusedDay) {
+                      final dia = DateTime(day.year, day.month, day.day);
+                      final eventosDoDia = _eventos[dia];
+                      if (eventosDoDia != null && eventosDoDia.containsKey(13)) {
+                        // Dia com aula marcada às 13h
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[400], // Cinzento claro
+                            shape: BoxShape.rectangle,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${day.day}',
+                            style: const TextStyle(color: Colors.black),
+                          ),
+                        );
+                      }
+                      return null; // Usa o padrão se não for às 13h
+                    },
+                  ),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                  ),
+                  calendarFormat: CalendarFormat.week,
+                  calendarStyle: CalendarStyle(
+                    selectedDecoration: const BoxDecoration(
+                      color: Color(0xFF16ADC2),
+                      shape: BoxShape.circle,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      shape: BoxShape.circle,
+                    ),
+                    selectedTextStyle: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (_selectedDay != null)
+                  Text(
+                    '${_selectedDay!.day}/${_selectedDay!.month}/${_selectedDay!.year}',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                const SizedBox(height: 16),
+                if (_selectedDay != null)
+                  ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: 11,
+                      separatorBuilder: (context, index) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final hora = 9 + index;
+                        final dia = DateTime(
+                          _selectedDay!.year,
+                          _selectedDay!.month,
+                          _selectedDay!.day,
+                        );
+                        final eventosDoDia = _eventos[dia] ?? {};
+                        final nomeAluno = eventosDoDia[hora]?['nome'];
+                        final diaHoraKey = gerarChaveDiaHora(dia, hora);
+                        final aceite = _horariosAceites.contains(diaHoraKey);
+                        print('Hora: $hora | Aceite: $aceite | Status: ${_eventos[dia]?[hora]}');
+
+                        // Verificar se é domingo, sábado entre 14 e 19 ou horário bloqueado
+                        bool bloquear = false;
+                        if (dia.weekday == DateTime.sunday) {
+                          bloquear = true;
+                        } else if (dia.weekday == DateTime.saturday && hora >= 14 && hora <= 19) {
+                          bloquear = true;
                         }
 
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text('Marcar Aula'),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  TextField(
-                                    controller: nomeController,
-                                    decoration: const InputDecoration(labelText: 'Nome'),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  DropdownButtonFormField<int>(
-                                    value: horaSelecionada,
-                                    decoration: const InputDecoration(labelText: 'Hora'),
-                                    items: horasDisponiveis.map((hora) {
-                                      return DropdownMenuItem<int>(
-                                        value: hora,
-                                        child: Text('$hora:00'),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      horaSelecionada = value!;
-                                    },
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () async {
-                                    final nome = nomeController.text.trim();
-                                    if (nome.isEmpty || _selectedDay == null) return;
+                        final estaBloqueado = _estaBloqueado(dia, hora);
 
-                                    final uri = Uri.parse('http://localhost:3000/api/aulas');
-                                    final resp = await http.post(
-                                      uri,
-                                      headers: {'Content-Type': 'application/json'},
-                                      body: jsonEncode({
-                                        'email': Session.email,
-                                        'nomeAluno': nome,
-                                        'data': _selectedDay!.toIso8601String().split('T')[0],
-                                        'hora': horaSelecionada.toString(),
-                                      }),
-                                    );
+                        Color? corDeFundo;
+                        if (hora == 13 || bloquear) {
+                          corDeFundo = Colors.grey[300];
+                        } else if (estaBloqueado) {
+                          corDeFundo = Colors.orange[100];
+                        } else if (nomeAluno != null && aceite) {
+                          corDeFundo = const Color(0xFFB2F2BB);
+                        }
 
-                                    Navigator.pop(context);
-                                    if (resp.statusCode == 201) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("Aula marcada com sucesso!")),
-                                      );
-                                      _carregarAulasMarcadas();
-                                    } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("Erro ao marcar aula.")),
-                                      );
-                                    }
-                                  },
-                                  child: const Text('Confirmar'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
-                      child: const Text('Marcar Aula'),
-                    ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_idInstrutorSelecionado != null) {
-                        _mostrarDialogoBloquearIntervalo(_idInstrutorSelecionado!);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Por favor, selecione um instrutor.')),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                    child: const Text('Bloquear Horas'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Lógica para bloquear dias
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
-                    child: const Text('Bloquear Dias'),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-              ),
-              const SizedBox(height: 20),
-              TableCalendar(
-                firstDay: DateTime.utc(2020, 1, 1),
-                lastDay: DateTime.utc(2030, 12, 31),
-                focusedDay: _focusedDay,
-                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _selectedDay = selectedDay;
-                    _focusedDay = focusedDay;
-                  });
-                },
-                locale: 'pt_PT',
-                eventLoader: (day) {
-                  final dia = DateTime(day.year, day.month, day.day);
-                  return _eventos.containsKey(dia) ? [1] : [];
-                },
-                calendarBuilders: CalendarBuilders(
-                  markerBuilder: (context, day, events) {
-                    if (events.isNotEmpty) {
-                      return Positioned(
-                        bottom: 1,
-                        child: Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: Colors.blue,
-                            shape: BoxShape.circle,
+                        return Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: corDeFundo,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ),
-                      );
-                    }
-                    return null;
-                  },
-                  defaultBuilder: (context, day, focusedDay) {
-                    final dia = DateTime(day.year, day.month, day.day);
-                    final eventosDoDia = _eventos[dia];
-                    if (eventosDoDia != null && eventosDoDia.containsKey(13)) {
-                      // Dia com aula marcada às 13h
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[400], // Cinzento claro
-                          shape: BoxShape.rectangle,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '${day.day}',
-                          style: const TextStyle(color: Colors.black),
-                        ),
-                      );
-                    }
-                    return null; // Usa o padrão se não for às 13h
-                  },
-                ),
-                headerStyle: const HeaderStyle(
-                  formatButtonVisible: false,
-                  titleCentered: true,
-                ),
-                calendarFormat: CalendarFormat.week,
-                calendarStyle: CalendarStyle(
-                  selectedDecoration: const BoxDecoration(
-                    color: Color(0xFF16ADC2),
-                    shape: BoxShape.circle,
-                  ),
-                  todayDecoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    shape: BoxShape.circle,
-                  ),
-                  selectedTextStyle: const TextStyle(color: Colors.white),
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (_selectedDay != null)
-                Text(
-                  '${_selectedDay!.day}/${_selectedDay!.month}/${_selectedDay!.year}',
-                  style: const TextStyle(fontSize: 18),
-                ),
-              const SizedBox(height: 16),
-              if (_selectedDay != null)
-                ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: 11,
-                    separatorBuilder: (context, index) => const Divider(),
-                    itemBuilder: (context, index) {
-                      final hora = 9 + index;
-                      final dia = DateTime(
-                        _selectedDay!.year,
-                        _selectedDay!.month,
-                        _selectedDay!.day,
-                      );
-                      final eventosDoDia = _eventos[dia] ?? {};
-                      final nomeAluno = eventosDoDia[hora]?['nome'];
-                      final diaHoraKey = gerarChaveDiaHora(dia, hora);
-                      final aceite = _horariosAceites.contains(diaHoraKey);
-                      print('Hora: $hora | Aceite: $aceite | Status: ${_eventos[dia]?[hora]}');
-
-                      // Verificar se é domingo ou sábado entre 14 e 19
-                      bool bloquear = false;
-                      if (dia.weekday == DateTime.sunday) {
-                        bloquear = true;
-                      } else if (dia.weekday == DateTime.saturday && hora >= 14 && hora <= 19) {
-                        bloquear = true;
-                      }
-
-                      Color? corDeFundo;
-                      if (hora == 13 || bloquear) {
-                        corDeFundo = Colors.grey[300];
-                      } else if (nomeAluno != null && aceite) {
-                        corDeFundo = const Color(0xFFB2F2BB);
-                      }
-
-                      return Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: corDeFundo,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '$hora:00',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '$hora:00',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: _estaBloqueado(dia, hora) ? Colors.orange[800] : Colors.black,
+                                          ),
+                                        ),
+                                        if (_estaBloqueado(dia, hora))
+                                          Padding(
+                                            padding: const EdgeInsets.only(left: 8.0),
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.lock_outline, size: 16, color: Colors.orange[800]),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  'Indisponível',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.orange[800],
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
                                     ),
-                                  ),
-                                  if (nomeAluno != null)
-                                    Text(
-                                      'Marcado por: $nomeAluno',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.black,
+                                    if (nomeAluno != null && !_estaBloqueado(dia, hora))
+                                      Text(
+                                        'Marcado por: $nomeAluno',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.black,
+                                        ),
                                       ),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            if (nomeAluno != null && !bloquear)
-                              Row(
-                                children: [
-                                  if (!aceite)
+                              if (nomeAluno != null && !bloquear && !_estaBloqueado(dia, hora))
+                                Row(
+                                  children: [
+                                    if (!aceite)
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          if (_idInstrutorSelecionado != null && _selectedDay != null) {
+                                            await _atualizarStatusAula(_selectedDay!, hora, 'aceite');
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                                        child: const Text('Aceitar'),
+                                      ),
+                                    if (!aceite) const SizedBox(width: 8),
                                     ElevatedButton(
                                       onPressed: () async {
                                         if (_idInstrutorSelecionado != null && _selectedDay != null) {
-                                          await _atualizarStatusAula(_selectedDay!, hora, 'aceite');
+                                          await _atualizarStatusAula(_selectedDay!, hora, 'recusada');
                                         }
                                       },
-                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                                      child: const Text('Aceitar'),
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                      child: Text(aceite ? 'Apagar' : 'Recusar'),
                                     ),
-                                  if (!aceite) const SizedBox(width: 8),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      if (_idInstrutorSelecionado != null && _selectedDay != null) {
-                                        await _atualizarStatusAula(_selectedDay!, hora, 'recusada');
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                    child: Text(aceite ? 'Apagar' : 'Recusar'),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      );
-                    }
-                ),
-            ],
+                                  ],
+                                ),
+                            ],
+                          ),
+                        );
+                      }
+                  ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
+        );
+    }
 }
