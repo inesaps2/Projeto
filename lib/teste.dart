@@ -1,5 +1,5 @@
 class Session {
-  static int? primeiroLogin; // 1 ou 0
+  static int? firstlogin; // 1 ou 0
   static String? email;
   static String? password;
   static String? nome;

@@ -47,12 +47,12 @@ class _LoginMobileState extends State<LoginMobile> {
         Session.instructor = user['instructor'] ?? 'A definir';
         Session.veiculo = user['veiculo'];
         Session.aulas = user['aulas'];
-        Session.primeiroLogin = user['primeiro_login'];
+        Session.firstlogin = user['first_login'];
         Session.id_type = user['id_type'];
         Session.aulas = user['aulas'];
 
         print("✅ Login com sucesso: ${user['name']}");
-        print("🟡 primeiro_login = ${Session.primeiroLogin}");
+        print("🟡 first_login = ${Session.firstlogin}");
 
         Navigator.pushReplacement(
           context,
@@ -74,80 +74,83 @@ class _LoginMobileState extends State<LoginMobile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login – Mobile')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/GO_DRIVING Logotipo vertical.png', width: 100),
-              const SizedBox(height: 10),
-              Image.asset('assets/perfil.png', width: 100),
-              const SizedBox(height: 20),
-              const Text(
-                'Login',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-
-              // Email
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email),
+      appBar: AppBar(title: const Text('Login')),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 60), // espaço extra opcional
+                Image.asset('assets/GO_DRIVING Logotipo vertical.png', width: 100),
+                const SizedBox(height: 10),
+                Image.asset('assets/perfil.png', width: 100),
+                const SizedBox(height: 20),
+                const Text(
+                  'Login',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Email é obrigatório';
-                  }
-                  final emailRegex = RegExp(r'^[\w\.-]+@[\w\.-]+\.\w+$');
-                  if (!emailRegex.hasMatch(value)) {
-                    return 'Email inválido';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              // Password
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock),
+                // Email
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Email é obrigatório';
+                    }
+                    final emailRegex = RegExp(r'^[\w\.-]+@[\w\.-]+\.\w+$');
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'Email inválido';
+                    }
+                    return null;
+                  },
                 ),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Password é obrigatória';
-                  }
-                  final specialCharRegex = RegExp(r'[<>_\W]');
-                  if (specialCharRegex.hasMatch(value)) {
-                    return 'A password não pode conter caracteres especiais';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 30),
+                const SizedBox(height: 20),
 
-              // Botão Login
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    final email = _emailController.text;
-                    final password = _passwordController.text;
-                    login(email, password);
-                  }
-                },
-                child: const Text('Entrar'),
-              ),
-            ],
+                // Password
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Password',
+                    prefixIcon: Icon(Icons.lock),
+                  ),
+                  obscureText: true,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Password é obrigatória';
+                    }
+                    final specialCharRegex = RegExp(r'[<>_\W]');
+                    if (specialCharRegex.hasMatch(value)) {
+                      return 'A password não pode conter caracteres especiais';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 30),
+
+                // Botão Login
+                ElevatedButton(
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      final email = _emailController.text;
+                      final password = _passwordController.text;
+                      login(email, password);
+                    }
+                  },
+                  child: const Text('Entrar'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -20,7 +20,7 @@ class _PerfilState extends State<Perfil> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    if (Session.primeiroLogin == 1 && !_avisoMostrado) {
+    if (Session.firstlogin == 1 && !_avisoMostrado) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _mostrarAlerta();
         _avisoMostrado = true;
@@ -76,90 +76,100 @@ class _PerfilState extends State<Perfil> {
         title: const Text('Perfil'),
         automaticallyImplyLeading: false,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Image.asset('assets/GO_DRIVING Logotipo FINAL.png',
-                    width: 150, height: 150),
-                IconButton(
-                  icon: const Icon(Icons.login_outlined),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const MyApp()),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          Center(
-            child: Image.asset('assets/perfil.png', width: 150, height: 150),
-          ),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(32, 0, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Nome: ${Session.nome ?? "X"}',
-                    style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 5),
-                Text('Email: ${Session.email ?? "X@gmail.com"}',
-                    style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Image.asset(
+                      'assets/GO_DRIVING Logotipo FINAL.png',
+                      width: 150,
+                      height: 50,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.login_outlined),
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MyApp()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 50),
 
-                // Mostrar só se for aluno (id_type == 1)
-                if (Session.id_type == 1) ...[
-                  Text('Categoria: ${Session.categoria ?? 'A definir'}',
-                      style: const TextStyle(fontSize: 18)),
-                  Text('Instrutor: ${Session.instructor ?? 'A definir'}',
-                      style: const TextStyle(fontSize: 18)),
-                  Text('Veículo: ${Session.veiculo ?? 'A definir'}',
-                      style: const TextStyle(fontSize: 18)),
-                  Text('Aulas: ${Session.aulas ?? 'X'}',
-                      style: const TextStyle(fontSize: 18)),
-                ],
-
-                // Mostrar só se for instrutor (id_type == 2)
-                if (Session.id_type == 2) ...[
-                  Text('Veículo: ${Session.veiculo ?? 'A definir'}',
-                      style: const TextStyle(fontSize: 18)),
-                ],
-
-          // Botão para alterar password
                 Center(
-                  child: ElevatedButton(
-                    onPressed: () => _mostrarDialogoAlterarPassword(),
-                    child: const Text('Alterar Password'),
+                  child: Image.asset('assets/perfil.png', width: 150, height: 150),
+                ),
+                const SizedBox(height: 40),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(32, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Nome: ${Session.nome ?? "X"}',
+                          style: const TextStyle(fontSize: 18)),
+                      const SizedBox(height: 5),
+                      Text('Email: ${Session.email ?? "X@gmail.com"}',
+                          style: const TextStyle(fontSize: 18)),
+                      const SizedBox(height: 5),
+
+                      // Mostrar só se for aluno (id_type == 1)
+                      if (Session.id_type == 1) ...[
+                        Text('Categoria: ${Session.categoria ?? 'A definir'}',
+                            style: const TextStyle(fontSize: 18)),
+                        const SizedBox(height: 5),
+                        Text('Instrutor: ${Session.instructor ?? 'A definir'}',
+                            style: const TextStyle(fontSize: 18)),
+                        const SizedBox(height: 5),
+                        Text('Veículo: ${Session.veiculo ?? 'A definir'}',
+                            style: const TextStyle(fontSize: 18)),
+                        const SizedBox(height: 5),
+                        Text('Aulas: ${Session.aulas ?? 'X'}',
+                            style: const TextStyle(fontSize: 18)),
+                        const SizedBox(height: 20),
+                      ],
+                      const SizedBox(height: 20),
+
+                      // Botão para alterar password
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () => _mostrarDialogoAlterarPassword(),
+                          child: const Text('Alterar Password'),
+                        ),
+                      ),
+
+                      if (Session.firstlogin == 1)
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(top: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.yellow[700],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Altere a password para a sua segurança.',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, color: Colors.black87),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-
-                const SizedBox(height: 10),
-
-                // Mensagem de aviso se primeiroLogin == 1
-                if (Session.primeiroLogin == 1)
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      color: Colors.yellow[700],
-                      child: const Text(
-                        'Altere a password para a sua segurança.',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.black87),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
-        ],
+        ),
       ),
+
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF16ADC2),
         selectedItemColor: Colors.white,
@@ -263,7 +273,7 @@ class _AlterarPasswordDialogState extends State<AlterarPasswordDialog> {
       setState(() {
         mensagem = 'Password alterada com sucesso.';
         Session.password = nova;
-        Session.primeiroLogin = 0;
+        Session.firstlogin = 0;
       });
 
       // Fecha o diálogo sinalizando sucesso
