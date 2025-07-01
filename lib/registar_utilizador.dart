@@ -5,6 +5,8 @@ import 'package:projeto/main.dart';
 import 'package:projeto/pagina_inicial_web.dart';
 import 'package:projeto/perfil_web.dart';
 import 'calendario_web.dart';
+import 'package:projeto/editar_perfil.dart';
+
 
 class RegistarUtilizador extends StatefulWidget {
   const RegistarUtilizador({super.key});
@@ -167,20 +169,32 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
             Image.asset('assets/GO_DRIVING Logotipo FINAL.png', height: 40),
             const Spacer(),
             IconButton(
-              icon: const Icon(Icons.account_circle),
+              icon: const Icon(Icons.edit),
+              tooltip: 'Editar Perfil',
               onPressed: () {
                 Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PerfilWeb()),
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditarPerfil()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.account_circle),
+              tooltip: 'Perfil',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PerfilWeb()),
                 );
               },
             ),
             IconButton(
               icon: const Icon(Icons.login_outlined),
+              tooltip: 'Sair',
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const MyApp())
+                  MaterialPageRoute(builder: (_) => const MyApp()),
                 );
               },
             ),

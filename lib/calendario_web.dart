@@ -804,12 +804,6 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                       _selectedDay = selectedDay;
                       _focusedDay = focusedDay;
                     });
-
-                    // Força a recarga dos horários bloqueados para o dia selecionado
-                    if (_idInstrutorSelecionado != null) {
-                      print('Recarregando horários bloqueados para o dia selecionado...');
-                      _carregarHorariosBloqueados();
-                    }
                   },
                   locale: 'pt_PT',
                   eventLoader: (day) {
