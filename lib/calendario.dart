@@ -165,7 +165,7 @@ class _CalendarioState extends State<Calendario> {
                     width: 150,
                     height: 50,
                   ),
-                  if (_selectedDay != null)
+                  if (_selectedDay != null && Session.id_type == 1) // Apenas para alunos
                     ElevatedButton(
                       onPressed: () {
                         final nomeController = TextEditingController();

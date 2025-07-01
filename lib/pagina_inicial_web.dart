@@ -8,15 +8,16 @@ class PaginaInicialWeb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Bem-vindo')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Image.asset('assets/GO_DRIVING Logotipo vertical.png', height: 100),
+              const SizedBox(height: 40),
               const Text(
-                'Bem-vindo à Plataforma Web',
+                'Bem-vindo(a)!',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 40),

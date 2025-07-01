@@ -776,89 +776,6 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                       child: const Text('Ver Horário'),
                     ),
                     const SizedBox(width: 8),
-                    // Aqui: só mostra o botão se o dia selecionado não for domingo
-                    if (_selectedDay == null || _selectedDay!.weekday != DateTime.sunday)
-                      ElevatedButton(
-                        onPressed: () {
-                          final nomeController = TextEditingController();
-                          int horaSelecionada = 9;
-
-                          List<int> horasDisponiveis;
-                          if (_selectedDay != null && _selectedDay!.weekday == DateTime.saturday) {
-                            horasDisponiveis = [9, 10, 11, 12]; // removeu o 13
-                          } else {
-                            horasDisponiveis = List.generate(11, (index) => 9 + index).where((hora) => hora != 13).toList();
-                          }
-
-                          showDialog(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: const Text('Marcar Aula'),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    TextField(
-                                      controller: nomeController,
-                                      decoration: const InputDecoration(labelText: 'Nome'),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    DropdownButtonFormField<int>(
-                                      value: horaSelecionada,
-                                      decoration: const InputDecoration(labelText: 'Hora'),
-                                      items: horasDisponiveis.map((hora) {
-                                        return DropdownMenuItem<int>(
-                                          value: hora,
-                                          child: Text('$hora:00'),
-                                        );
-                                      }).toList(),
-                                      onChanged: (value) {
-                                        horaSelecionada = value!;
-                                      },
-                                    ),
-                                  ],
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () async {
-                                      final nome = nomeController.text.trim();
-                                      if (nome.isEmpty || _selectedDay == null) return;
-
-                                      final uri = Uri.parse('http://localhost:3000/api/aulas');
-                                      final resp = await http.post(
-                                        uri,
-                                        headers: {'Content-Type': 'application/json'},
-                                        body: jsonEncode({
-                                          'email': Session.email,
-                                          'nomeAluno': nome,
-                                          'data': _selectedDay!.toIso8601String().split('T')[0],
-                                          'hora': horaSelecionada.toString(),
-                                        }),
-                                      );
-
-                                      Navigator.pop(context);
-                                      if (resp.statusCode == 201) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text("Aula marcada com sucesso!")),
-                                        );
-                                        _carregarAulasMarcadas();
-                                      } else {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text("Erro ao marcar aula.")),
-                                        );
-                                      }
-                                    },
-                                    child: const Text('Confirmar'),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16ADC2)),
-                        child: const Text('Marcar Aula'),
-                      ),
-                    const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: () {
                         if (_idInstrutorSelecionado != null) {
@@ -870,29 +787,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                         }
                       },
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                      child: const Text('Bloquear Horas'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Lógica para bloquear dias
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
-                      child: const Text('Bloquear Dias'),
-                    ),
-                    const SizedBox(width: 8),
-                    Tooltip(
-                      message: 'Recarregar horários bloqueados',
-                      child: IconButton(
-                        icon: const Icon(Icons.refresh),
-                        onPressed: _idInstrutorSelecionado != null
-                            ? () {
-                          print('Recarregando horários bloqueados manualmente...');
-                          _carregarHorariosBloqueados();
-                        }
-                            : null,
-                        color: Colors.blue,
-                      ),
+                      child: const Text('Bloquear Horário'),
                     ),
                     const SizedBox(width: 8),
                   ],
