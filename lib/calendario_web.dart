@@ -315,6 +315,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         final hora = dt.hour;
         final nome = aula['nome_aluno'] ?? '';
         final status = aula['class_status'] ?? '';
+        final id = aula['id']; // Adicionando o ID da aula
 
         if (!novosEventos.containsKey(key)) {
           novosEventos[key] = {};
@@ -323,6 +324,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         novosEventos[key]![hora] = {
           'nome': nome,
           'status': status,
+          'id': id, // Armazenando o ID da aula
         };
 
         // Corrigir a chave da hora com padding correto
@@ -352,15 +354,17 @@ class _CalendarioWebState extends State<CalendarioWeb> {
     try {
       late final http.Response response;
 
+      // Obtém o ID da aula do evento
+      final idAula = _eventos[DateTime(data.year, data.month, data.day)]?[hora]?['id'];
+
+      if (idAula == null) {
+        throw Exception('ID da aula não encontrado');
+      }
+
       if (novoStatus == 'recusada') {
         response = await http.delete(
-          Uri.parse('http://localhost:3000/api/aulas'),
+          Uri.parse('http://localhost:3000/api/aulas/rec/$idAula'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'id_instructor': _idInstrutorSelecionado,
-            'data': dataFormatada,
-            'hora': horaFormatada,
-          }),
         );
       } else {
         // Para aceitar, usamos PUT
@@ -369,6 +373,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'id_instructor': _idInstrutorSelecionado,
+            'id': idAula, // Usando o ID correto da aula
             'data': dataFormatada,
             'hora': horaFormatada,
             'novo_status': novoStatus,
@@ -692,11 +697,13 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                     print('De $dataHoraInicio a $dataHoraFim');
 
                     await bloquearHorario(
-                      idInstrutor: idInstrutor, // <- Certifica-te que esta variável existe no escopo
+                      idInstrutor: idInstrutor,
                       dataInicio: dataHoraInicio,
                       dataFim: dataHoraFim,
                       motivo: motivoSelecionado,
                     );
+
+                    await _carregarHorariosBloqueados();
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Bloqueio enviado com sucesso!')),
@@ -726,7 +733,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
       uri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'id_instrutor': idInstrutor,
+        'id_instructor': idInstrutor,
         'date_start': dataInicio.toIso8601String(),
         'date_end': dataFim.toIso8601String(),
         'reason': motivo,
