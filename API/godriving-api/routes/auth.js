@@ -1,49 +1,51 @@
 const express = require('express');
-const router = express.Router();
-const connection = require('../db');
-const bcrypt = require('bcrypt');
+const dotenv = require('dotenv');
+const cors = require('cors');
 
-// Registo de utilizador
-router.post('/register', async (req, res) => {
-  const { name, email, password, id_type, category, associated_car } = req.body;
+dotenv.config();
 
-  connection.query('SELECT * FROM user WHERE email = ?', [email], async (err, results) => {
-    if (err) return res.status(500).json({ error: 'Erro no banco' });
-    if (results.length > 0) return res.status(400).json({ error: 'Email já registado' });
+const authRoutes = require('./routes/auth');
+const aulasRoutes = require('./routes/aulas');
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-    connection.query(
-      'INSERT INTO user (name, email, password, id_type, category, associated_car) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, email, hashedPassword, id_type, category, associated_car],
-      (err, results) => {
-        if (err) return res.status(500).json({ error: 'Erro ao criar utilizador' });
-        res.status(201).json({ message: 'Utilizador criado com sucesso!' });
-      }
-    );
-  });
+
+// Middlewares
+app.use(cors());
+app.use(express.json());
+
+
+// Logs de requisições para debugging
+app.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.url}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Corpo do pedido:', req.body);
+  }
+  next();
 });
 
-// Login de usuário
-router.post('/login', (req, res) => {
-  console.log('Dados recebidos:', req.body);
-  const { email, password } = req.body;
+// Rotas
+app.use('/api/auth', authRoutes);
+app.use('/api', aulasRoutes);
+app.use('/api/aulas', aulasRoutes);
 
-  connection.query('SELECT * FROM user WHERE email = ?', [email], async (err, results) => {
-    if (err) return res.status(500).json({ error: 'Erro no banco' });
-    if (results.length === 0) return res.status(400).json({ error: 'Email não encontrado' });
-
-    const user = results[0];
-    console.log('Senha recebida:', password);
-    console.log('Hash armazenado:', user.password);
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    console.log('Password correta?', passwordMatch);
-
-    if (!passwordMatch) return res.status(401).json({ error: 'Senha incorreta' });
-
-    res.json({ message: 'Login efetuado com sucesso', user: { id: user.id, name: user.name, email: user.email, id_type: user.id_type } });
-  });
+// Rota de teste
+app.get('/ping', (req, res) => {
+  res.status(200).json({ message: 'pong' });
 });
 
-module.exports = router;
+app.get('/', (req, res) => {
+  res.send('API do GoDriving está no ar!');
+});
+
+// Middleware de erro
+app.use((err, req, res, next) => {
+  console.error('Erro inesperado:', err);
+  res.status(500).json({ error: 'Erro interno do servidor' });
+});
+
+// Iniciar servidor
+app.listen(PORT, () => {
+  console.log(`Servidor iniciado na porta ${PORT}`);
+});
