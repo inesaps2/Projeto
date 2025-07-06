@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:projeto/calendario.dart';
 import 'package:projeto/perfil.dart';
 import 'package:projeto/main.dart';
+import 'package:projeto/config.dart';
 
 class PaginaInicial extends StatefulWidget {
   const PaginaInicial({super.key});
@@ -37,7 +38,7 @@ class _PaginaInicialState extends State<PaginaInicial> {
   }
 
   void fetchInstrutores() async {
-    final url = Uri.parse('http://10.0.2.2:3000/api/instrutores');
+    final url = Uri.parse('${Config.baseUrl}/api/instrutores');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:projeto/pagina_inicial.dart';
 import 'package:projeto/teste.dart';
+import 'package:projeto/config.dart';
 
 class LoginMobile extends StatefulWidget {
   const LoginMobile({super.key});
@@ -17,7 +18,7 @@ class _LoginMobileState extends State<LoginMobile> {
   final _passwordController = TextEditingController();
 
   Future<void> login(String email, String password) async {
-    final uri = Uri.parse("http://10.0.2.2:3000/api/auth/login");
+    final uri = Uri.parse('${Config.baseUrl}/api/auth/login');
 
     try {
       final response = await http.post(

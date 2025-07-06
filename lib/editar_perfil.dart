@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:projeto/config.dart';
 
 class EditarPerfil extends StatefulWidget {
   const EditarPerfil({super.key});
@@ -35,7 +36,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
 
   Future<void> _buscarUtilizadores() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/api/utilizadores'));
+      final response = await http.get(Uri.parse('${Config.baseUrl}/api/utilizadores'));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -166,7 +167,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
                             ElevatedButton(
                               onPressed: () async {
                                 if (emailSelecionado != null) {
-                                  final url = Uri.parse('http://localhost:3000/api/utilizadores/$emailSelecionado');
+                                  final url = Uri.parse('${Config.baseUrl}/api/utilizadores/$emailSelecionado');
 
                                   final response = await http.put(
                                     url,

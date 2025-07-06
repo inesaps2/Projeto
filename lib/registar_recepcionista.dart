@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:projeto/config.dart';
 
 class RegistarRecepcionista extends StatefulWidget {
   const RegistarRecepcionista({super.key});
@@ -17,13 +18,13 @@ class _RegistarRecepcionistaState extends State<RegistarRecepcionista> {
 
   void registarRecepcionista() async {
     if (_formKey.currentState!.validate()) {
-      final url = Uri.parse('http://localhost:3000/api/auth/register');
+      final url = Uri.parse('${Config.baseUrl}/api/auth/register');
 
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'nome': nomeController.text,
+          'name': nomeController.text,
           'email': emailController.text,
           'password': passwordController.text,
           'id_type': 3 // ID para recepcionista

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:projeto/registar_utilizador.dart';
+import 'package:projeto/config.dart';
 
 class LoginRecepcionista extends StatefulWidget {
   const LoginRecepcionista({super.key});
@@ -26,7 +27,7 @@ class _LoginRecepcionistaState extends State<LoginRecepcionista> {
     try {
       print('A fazer pedido de login...');
       final response = await http.post(
-        Uri.parse('http://localhost:3000/login'),
+        Uri.parse('${Config.baseUrl}/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );

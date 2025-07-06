@@ -6,6 +6,7 @@ import 'package:projeto/pagina_inicial_web.dart';
 import 'package:projeto/perfil_web.dart';
 import 'calendario_web.dart';
 import 'package:projeto/editar_perfil.dart';
+import 'package:projeto/config.dart';
 
 
 class RegistarUtilizador extends StatefulWidget {
@@ -60,7 +61,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
 
   void registrarAluno() async {
     if (_formKeyAluno.currentState!.validate()) {
-      final url = Uri.parse('http://localhost:3000/api/auth/register');
+      final url = Uri.parse('${Config.baseUrl}/api/auth/register');
 
       print('--- A ENVIAR DADOS ---');
       print('Nome: ${nomeAlunoController.text}');
@@ -104,7 +105,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
 
   void registrarInstrutor() async {
     if (_formKeyInstrutor.currentState!.validate()) {
-      final url = Uri.parse('http://localhost:3000/api/auth/register');
+      final url = Uri.parse('${Config.baseUrl}/api/auth/register');
 
       print('--- A ENVIAR DADOS (Instrutor) ---');
       print('Nome: ${nomeInstrutorController.text}');
@@ -142,7 +143,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
   }
 
   void fetchInstrutores() async {
-    final url = Uri.parse('http://localhost:3000/api/instrutores');
+    final url = Uri.parse('${Config.baseUrl}/api/instrutores');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {

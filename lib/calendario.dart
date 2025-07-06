@@ -6,6 +6,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:projeto/main.dart';
 import 'package:projeto/pagina_inicial.dart';
 import 'package:projeto/perfil.dart';
+import 'package:projeto/config.dart';
 
 class Calendario extends StatefulWidget {
   const Calendario({super.key});
@@ -30,7 +31,7 @@ class _CalendarioState extends State<Calendario> {
   }
 
   Future<void> _carregarAulasMarcadas() async {
-    final uri = Uri.parse('http://10.0.2.2:3000/api/aulas?email=${Session.email}');
+    final uri = Uri.parse('${Config.baseUrl}/api/aulas?email=${Session.email}');
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
@@ -82,8 +83,8 @@ class _CalendarioState extends State<Calendario> {
   Future<void> _carregarHorariosBloqueados() async {
     if (_idInstrutor == null) return;
     try {
-      final url = 'http://10.0.2.2:3000/api/blocked-schedules?instructorId=$_idInstrutor';
-      final response = await http.get(Uri.parse(url));
+      final url = Uri.parse('${Config.baseUrl}/api/blocked-schedules?instructorId=$_idInstrutor');
+      final response = await http.get(url);
       if (response.statusCode == 200) {
         final List blocos = jsonDecode(response.body);
         final Map<String, Map<String, dynamic>> novosBloqueios = {};
@@ -221,7 +222,7 @@ class _CalendarioState extends State<Calendario> {
                                       return;
                                     }
 
-                                    final uri = Uri.parse('http://10.0.2.2:3000/api/aulas');
+                                    final uri = Uri.parse('${Config.baseUrl}/api/aulas');
                                     final resp = await http.post(
                                       uri,
                                       headers: {'Content-Type': 'application/json'},
@@ -390,7 +391,7 @@ class _CalendarioState extends State<Calendario> {
                                 );
 
                                 if (confirm == true) {
-                                  final uri = Uri.parse('http://10.0.2.2:3000/api/aulas/$aulaId');
+                                  final uri = Uri.parse('${Config.baseUrl}/api/aulas/$aulaId');
                                   final response = await http.delete(uri);
 
                                   if (response.statusCode == 200) {
@@ -436,7 +437,7 @@ class _CalendarioState extends State<Calendario> {
                                   );
 
                                   if (confirm == true) {
-                                    final uri = Uri.parse('http://10.0.2.2:3000/api/aulas/concluir/$aulaId');
+                                    final uri = Uri.parse('${Config.baseUrl}/api/aulas/concluir/$aulaId');
                                     final response = await http.post(uri);
 
                                     if (response.statusCode == 200) {
@@ -498,12 +499,12 @@ class _CalendarioState extends State<Calendario> {
   Widget _buildNavIcon({required IconData icon, required int index, required int currentIndex}) {
     final bool isSelected = index == currentIndex;
     return Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white24 : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon),
-        );
-    }
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.white24 : Colors.transparent,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon),
+    );
+  }
 }

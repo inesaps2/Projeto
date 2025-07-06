@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'teste.dart';
+import 'package:projeto/config.dart';
+
 
 class AlterarPassword extends StatefulWidget {
   const AlterarPassword({super.key});
@@ -31,7 +33,7 @@ class _AlterarPasswordState extends State<AlterarPassword> {
       return;
     }
 
-    final url = Uri.parse('http://10.0.2.2:3000/api/auth/alterar_password'); // emulador Android
+    final url = Uri.parse('${Config.baseUrl}/api/auth/alterar_password'); // emulador Android
 
     print('📤 Enviando pedido PUT para: $url');
     print('📦 Dados: $email | $antiga | $nova');

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:projeto/registar_utilizador.dart';
 import 'package:projeto/teste.dart';
+import 'package:projeto/config.dart';
 
 class LoginWeb extends StatefulWidget {
   const LoginWeb({super.key});
@@ -26,7 +27,7 @@ class _LoginWebState extends State<LoginWeb> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3000/api/auth/login'),
+        Uri.parse('${Config.baseUrl}/api/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );

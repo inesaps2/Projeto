@@ -5,6 +5,7 @@ import 'package:projeto/main.dart';
 import 'package:projeto/teste.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:projeto/config.dart';
 
 class Perfil extends StatefulWidget {
   const Perfil({super.key});
@@ -260,7 +261,7 @@ class _AlterarPasswordDialogState extends State<AlterarPasswordDialog> {
 
     // Chamada HTTP para alterar a password
     final response = await http.put(
-      Uri.parse('http://10.0.2.2:3000/api/auth/alterar_password'),
+      Uri.parse('${Config.baseUrl}/api/auth/alterar_password'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'email': email,
