@@ -14,7 +14,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
   List<Map<String, dynamic>> utilizadores = [];
   bool carregando = true;
 
-  // Função para converter id_type para texto
+  //Função para converter id_type para texto
   String tipoUtilizador(int? idType) {
     switch (idType) {
       case 1:

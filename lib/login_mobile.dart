@@ -52,8 +52,8 @@ class _LoginMobileState extends State<LoginMobile> {
         Session.id_type = user['id_type'];
         Session.aulas = user['aulas'];
 
-        print("✅ Login com sucesso: ${user['name']}");
-        print("🟡 first_login = ${Session.firstlogin}");
+        print("Login com sucesso: ${user['name']}");
+        print("first_login = ${Session.firstlogin}");
 
         Navigator.pushReplacement(
           context,

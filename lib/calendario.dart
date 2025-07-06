@@ -65,7 +65,7 @@ class _CalendarioState extends State<Calendario> {
       setState(() {
         _eventos = novosEventos;
       });
-      // Carrega horários bloqueados se ainda não estiverem carregados
+      //Carrega horários bloqueados se ainda não estiverem carregados
       if (_idInstrutor != null && _horariosBloqueados.isEmpty) {
         await _carregarHorariosBloqueados();
       }

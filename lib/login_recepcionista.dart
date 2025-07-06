@@ -37,7 +37,7 @@ class _LoginRecepcionistaState extends State<LoginRecepcionista> {
 
         print('Dados recebidos: $data');
         if (data['id_type'] == 3) {
-          // ✅ É recepcionista
+          // É recepcionista
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const RegistarUtilizador()),

@@ -35,8 +35,8 @@ class _AlterarPasswordState extends State<AlterarPassword> {
 
     final url = Uri.parse('${Config.baseUrl}/api/auth/alterar_password'); // emulador Android
 
-    print('📤 Enviando pedido PUT para: $url');
-    print('📦 Dados: $email | $antiga | $nova');
+    print('Enviando pedido PUT para: $url');
+    print('Dados: $email | $antiga | $nova');
 
     try {
       final response = await http.put(
@@ -49,8 +49,8 @@ class _AlterarPasswordState extends State<AlterarPassword> {
         }),
       );
 
-      print('📥 Resposta da API: ${response.statusCode}');
-      print('🔎 Corpo: ${response.body}');
+      print('Resposta da API: ${response.statusCode}');
+      print('Corpo: ${response.body}');
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(

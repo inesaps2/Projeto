@@ -194,13 +194,13 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         print('Resposta do backend (instrutor): $data');
 
         if (data != null && data['existe'] == true) {
-          final id_instructor = data['id'];  // pega o id do instrutor
+          final id_instructor = data['id'];  //pega o id do instrutor
           print('Instrutor selecionado com id: $id_instructor');
 
           bool idMudou = _idInstrutorSelecionado != id_instructor;
 
           setState(() {
-            _idInstrutorSelecionado = id_instructor;  // atualiza o estado com o id
+            _idInstrutorSelecionado = id_instructor;  //atualiza o estado com o id
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
