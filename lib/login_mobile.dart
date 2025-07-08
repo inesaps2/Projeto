@@ -33,7 +33,7 @@ class _LoginMobileState extends State<LoginMobile> {
         final int idType = user['id_type'];
 
         if (idType == 3) {
-          // Bloqueia recepcionista
+          // Bloqueia a recepcionista
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Recepcionistas não têm acesso à aplicação móvel.")),
           );
@@ -83,7 +83,7 @@ class _LoginMobileState extends State<LoginMobile> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(height: 60), // espaço extra opcional
+                const SizedBox(height: 60),
                 Image.asset('assets/GO_DRIVING Logotipo vertical.png', width: 100),
                 const SizedBox(height: 10),
                 Image.asset('assets/perfil.png', width: 100),
