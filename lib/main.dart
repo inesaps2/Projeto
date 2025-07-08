@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
 
       title: 'App com Calendário',
 
-      // Página inicial condicional
+      // Página inicial
       home: kIsWeb ? const PaginaInicialWeb(): const LoginSelector(),
 
       // Rotas
