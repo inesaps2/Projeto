@@ -30,11 +30,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api', aulasRoutes);
 app.use('/api/aulas', aulasRoutes);
 
-// Rota de teste
-app.get('/ping', (req, res) => {
-  res.status(200).json({ message: 'pong' });
-});
-
 app.get('/', (req, res) => {
   res.send('API do GoDriving está no ar!');
 });
