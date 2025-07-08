@@ -64,7 +64,7 @@ class _AlterarPasswordState extends State<AlterarPassword> {
         );
       }
     } catch (e) {
-      print('❌ Erro na requisição: $e');
+      print('Erro na requisição: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Erro na ligação ao servidor')),
       );
