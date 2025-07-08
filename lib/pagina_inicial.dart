@@ -48,7 +48,7 @@ class _PaginaInicialState extends State<PaginaInicial> {
               data.map<String>((item) => item['name'] as String).toList();
         });
       } else {
-        print('Erro ao buscar instrutores: ${response.body}');
+        print('Erro ao procurar instrutores: ${response.body}');
       }
     } catch (e) {
       print('Erro ao conectar ao servidor: $e');
