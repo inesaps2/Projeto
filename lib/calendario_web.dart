@@ -9,6 +9,7 @@ import 'package:projeto/pagina_inicial.dart';
 import 'package:projeto/perfil.dart';
 import 'package:projeto/config.dart';
 
+// Extensão para formatar strings com a primeira letra maiúscula
 extension StringExtension on String {
   String capitalize() {
     return split(' ').map((word) =>
@@ -34,6 +35,7 @@ String gerarChaveDiaHora(DateTime data, int hora) {
 }
 
 class _CalendarioWebState extends State<CalendarioWeb> {
+  // Mapa para armazenar horários bloqueados por data e hora
   final Map<String, Map<String, dynamic>> _horariosBloqueados = {};
   int? _idInstrutorSelecionado;
   List<Map<String, dynamic>> _instrutores = [];
@@ -53,6 +55,8 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   Future<void> _carregarHorariosBloqueados() async {
+    /// Carrega os horários bloqueados do servidor para o instrutor selecionado
+    /// Atualiza o estado com os horários indisponíveis
     if (_idInstrutorSelecionado == null) {
       print('ID do instrutor não definido, não é possível carregar horários bloqueados');
       return;
@@ -147,6 +151,11 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   Future<String> _getBlockedReason(DateTime data, int hora) async {
+    /// Obtém o motivo do bloqueio de um horário específico
+    /// @param data Data a verificar
+    /// @param hora Hora a verificar
+    /// @return Motivo do bloqueio ou 'Indisponível' se não estiver bloqueado
+
     if (!_estaBloqueado(data, hora)) {
       return 'Indisponível';
     }
@@ -169,6 +178,10 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   bool _estaBloqueado(DateTime data, int hora) {
+    /// Verifica se um horário específico está bloqueado
+    /// @param data Data a verificar
+    /// @param hora Hora a verificar
+    /// @return true se o horário estiver bloqueado, false caso contrário
     if (_horariosBloqueados.isEmpty) {
       print('_estaBloqueado(${data.toString()}, $hora): Nenhum horário bloqueado carregado');
       return false;
@@ -207,6 +220,8 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   Map<DateTime, Map<int, Map<String, dynamic>>> _eventos = {};
 
   Future<void> _verificarInstrutor() async {
+    /// Verifica e carrega os dados do instrutor selecionado
+    /// Atualiza a interface com os horários do instrutor
     if (_instrutorSelecionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor, selecione um instrutor.')),
@@ -239,6 +254,8 @@ class _CalendarioWebState extends State<CalendarioWeb> {
 
   @override
   void initState() {
+    // Inicialização do componente
+    // Carrega os instrutores e as aulas marcadas
     super.initState();
     _selectedDay = _focusedDay;
     _carregarInstrutores();
@@ -268,6 +285,8 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   Future<void> _carregarAulasMarcadas() async {
+    /// Carrega as aulas marcadas para o utilizador atual
+    /// Atualiza o calendário com os eventos existentes
     final uri = Uri.parse('${Config.baseUrl}/aulas/recepcionista?email=${Session.email}');
     final response = await http.get(uri);
 
@@ -315,6 +334,8 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   Future<void> _carregarAulasDoInstrutor(String nomeInstrutor) async {
+    /// Carrega as aulas de um instrutor específico
+    /// @param nomeInstrutor Nome do instrutor para carregar as aulas
     final uri = Uri.parse('${Config.baseUrl}/api/aulas/recepcionista?instrutor=$nomeInstrutor');
     final response = await http.get(uri);
 
@@ -377,6 +398,10 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   }
 
   Future<void> _atualizarStatusAula(DateTime data, int hora, String novoStatus) async {
+    /// Atualiza o status de uma aula (aceite/recusada)
+    /// @param data Data da aula
+    /// @param hora Hora da aula
+    /// @param novoStatus Novo status a ser definido
     if (_idInstrutorSelecionado == null) return;
 
     final dataFormatada = '${data.year}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
@@ -398,13 +423,12 @@ class _CalendarioWebState extends State<CalendarioWeb> {
           headers: {'Content-Type': 'application/json'},
         );
       } else {
-        // Para aceitar, usamos PUT
         response = await http.put(
           Uri.parse('${Config.baseUrl}/api/classes/status'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'id_instructor': _idInstrutorSelecionado,
-            'id': idAula, // Usando o ID correto da aula
+            'id': idAula,
             'data': dataFormatada,
             'hora': horaFormatada,
             'novo_status': novoStatus,
@@ -422,7 +446,6 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         // Recarrega as aulas para atualizar a lista
         await _carregarAulasDoInstrutor(_instrutorSelecionado!);
 
-        // Mostra mensagem de sucesso
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -883,7 +906,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                       // Dia com aula marcada às 13h
                       return Container(
                         decoration: BoxDecoration(
-                          color: Colors.grey[400], // Cinzento claro
+                          color: Colors.grey[400],
                           shape: BoxShape.rectangle,
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -894,7 +917,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                         ),
                       );
                     }
-                    return null; // Usa o padrão se não for às 13h
+                    return null;
                   },
                 ),
                 headerStyle: const HeaderStyle(
