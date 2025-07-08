@@ -129,7 +129,7 @@ class _PerfilState extends State<Perfil> {
                         Text('Instrutor: ${Session.instructor ?? 'A definir'}',
                             style: const TextStyle(fontSize: 18)),
                         const SizedBox(height: 5),
-                        Text('Veículo: ${Session.veiculo ?? 'A definir'}',
+                        Text('Veículo: ${Session.veiculo?? 'A definir'}',
                             style: const TextStyle(fontSize: 18)),
                         const SizedBox(height: 5),
                         Text('Aulas: ${Session.aulas ?? 'X'}',

@@ -8,7 +8,7 @@ class Config {
     } else if (Platform.isAndroid) {
       return "http://10.0.2.2:3000";
     } else {
-      return "http://192.168.0.139:3000";
+      return "http://192.168.1.70:3000";
     }
   }
 }

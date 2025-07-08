@@ -9,6 +9,16 @@ import 'package:projeto/pagina_inicial.dart';
 import 'package:projeto/perfil.dart';
 import 'package:projeto/config.dart';
 
+extension StringExtension on String {
+  String capitalize() {
+    return split(' ').map((word) =>
+    word.isNotEmpty
+        ? word[0].toUpperCase() + word.substring(1).toLowerCase()
+        : ''
+    ).join(' ');
+  }
+}
+
 class CalendarioWeb extends StatefulWidget {
   const CalendarioWeb({super.key});
 
@@ -24,9 +34,10 @@ String gerarChaveDiaHora(DateTime data, int hora) {
 }
 
 class _CalendarioWebState extends State<CalendarioWeb> {
-  final TextEditingController _instrutorController = TextEditingController();
   final Map<String, Map<String, dynamic>> _horariosBloqueados = {};
   int? _idInstrutorSelecionado;
+  List<Map<String, dynamic>> _instrutores = [];
+  String? _instrutorSelecionado;
 
   void InstrutorSelecionado(int id) {
     print('InstrutorSelecionado: Instrutor com id $id selecionado');
@@ -135,6 +146,28 @@ class _CalendarioWebState extends State<CalendarioWeb> {
     }
   }
 
+  Future<String> _getBlockedReason(DateTime data, int hora) async {
+    if (!_estaBloqueado(data, hora)) {
+      return 'Indisponível';
+    }
+
+    final chaveData = '${data.year}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
+    final bloqueiosDoDia = _horariosBloqueados[chaveData];
+
+    if (bloqueiosDoDia == null) {
+      return 'Indisponível';
+    }
+
+    // Se for um bloqueio de dia inteiro
+    if (bloqueiosDoDia['fullDay'] == true) {
+      return bloqueiosDoDia['reason'] ?? 'Indisponível';
+    }
+
+    // Se for um bloqueio por hora específica
+    final motivo = bloqueiosDoDia[hora.toString()];
+    return motivo?.toString().replaceAll('_', ' ').capitalize() ?? 'Indisponível';
+  }
+
   bool _estaBloqueado(DateTime data, int hora) {
     if (_horariosBloqueados.isEmpty) {
       print('_estaBloqueado(${data.toString()}, $hora): Nenhum horário bloqueado carregado');
@@ -174,58 +207,32 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   Map<DateTime, Map<int, Map<String, dynamic>>> _eventos = {};
 
   Future<void> _verificarInstrutor() async {
-    final nomeInstrutor = _instrutorController.text.trim();
-
-    if (nomeInstrutor.isEmpty) {
+    if (_instrutorSelecionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, insira o nome do instrutor.')),
+        const SnackBar(content: Text('Por favor, selecione um instrutor.')),
       );
       return;
     }
 
     try {
-      final uri = Uri.parse('${Config.baseUrl}/api/instrutores?nome=$nomeInstrutor');
-      final response = await http.get(uri);
+      final instrutor = _instrutores.firstWhere(
+            (instrutor) => instrutor['name'] == _instrutorSelecionado,
+      );
 
-      print('Body completo da resposta: ${response.body}');
+      setState(() {
+        _idInstrutorSelecionado = instrutor['id'];
+      });
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        print('Resposta do backend (instrutor): $data');
+      await _carregarHorariosBloqueados();
+      await _carregarAulasDoInstrutor(_instrutorSelecionado!);
 
-        if (data != null && data['existe'] == true) {
-          final id_instructor = data['id'];  //pega o id do instrutor
-          print('Instrutor selecionado com id: $id_instructor');
-
-          bool idMudou = _idInstrutorSelecionado != id_instructor;
-
-          setState(() {
-            _idInstrutorSelecionado = id_instructor;  //atualiza o estado com o id
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Instrutor "$nomeInstrutor" encontrado!')),
-          );
-
-          if (idMudou) {
-            await _carregarHorariosBloqueados();
-          }
-
-          await _carregarAulasDoInstrutor(nomeInstrutor);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Instrutor "$nomeInstrutor" não encontrado.')),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao verificar instrutor.')),
-        );
-      }
-    } catch (e) {
-      print('Erro na verificação: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro de conexão com o servidor.')),
+        SnackBar(content: Text('Instrutor "$_instrutorSelecionado" selecionado!')),
+      );
+    } catch (e) {
+      print('Erro ao selecionar instrutor: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao selecionar o instrutor.')),
       );
     }
   }
@@ -234,7 +241,30 @@ class _CalendarioWebState extends State<CalendarioWeb> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
+    _carregarInstrutores();
     _carregarAulasMarcadas();
+  }
+
+  Future<void> _carregarInstrutores() async {
+    try {
+      final response = await http.get(Uri.parse('${Config.baseUrl}/api/instrutores'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          _instrutores = List<Map<String, dynamic>>.from(data);
+          if (_instrutores.isNotEmpty) {
+            _instrutorSelecionado = _instrutores.first['name'];
+            _idInstrutorSelecionado = _instrutores.first['id'];
+            _carregarHorariosBloqueados();
+          }
+        });
+      }
+    } catch (e) {
+      print('Erro ao carregar instrutores: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao carregar a lista de instrutores')),
+      );
+    }
   }
 
   Future<void> _carregarAulasMarcadas() async {
@@ -390,7 +420,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         print('Resposta do servidor: $responseData');
 
         // Recarrega as aulas para atualizar a lista
-        await _carregarAulasDoInstrutor(_instrutorController.text.trim());
+        await _carregarAulasDoInstrutor(_instrutorSelecionado!);
 
         // Mostra mensagem de sucesso
         if (mounted) {
@@ -520,7 +550,7 @@ class _CalendarioWebState extends State<CalendarioWeb> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: const Text('Bloquear Horas e Dias'),
+              title: const Text('Bloquear Horário'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -767,13 +797,24 @@ class _CalendarioWebState extends State<CalendarioWeb> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
-                controller: _instrutorController,
+              DropdownButtonFormField<String>(
+                value: _instrutorSelecionado,
                 decoration: const InputDecoration(
-                  labelText: 'Nome do Instrutor',
+                  labelText: 'Selecione o Instrutor',
                   border: OutlineInputBorder(),
                   contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
                 ),
+                items: _instrutores.map<DropdownMenuItem<String>>((instrutor) {
+                  return DropdownMenuItem<String>(
+                    value: instrutor['name'],
+                    child: Text(instrutor['name'] ?? 'Sem nome'),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _instrutorSelecionado = newValue;
+                  });
+                },
               ),
               const SizedBox(height: 8),
               Row(
@@ -949,13 +990,19 @@ class _CalendarioWebState extends State<CalendarioWeb> {
                                             children: [
                                               Icon(Icons.lock_outline, size: 16, color: Colors.orange[800]),
                                               const SizedBox(width: 4),
-                                              Text(
-                                                'Indisponível',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.orange[800],
-                                                  fontStyle: FontStyle.italic,
-                                                ),
+                                              FutureBuilder<String>(
+                                                future: _getBlockedReason(dia, hora),
+                                                builder: (context, snapshot) {
+                                                  final reason = snapshot.data ?? 'Indisponível';
+                                                  return Text(
+                                                    'Indisponível - $reason',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.orange[800],
+                                                      fontStyle: FontStyle.italic,
+                                                    ),
+                                                  );
+                                                },
                                               ),
                                             ],
                                           ),

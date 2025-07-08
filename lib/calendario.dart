@@ -8,6 +8,16 @@ import 'package:projeto/pagina_inicial.dart';
 import 'package:projeto/perfil.dart';
 import 'package:projeto/config.dart';
 
+extension StringExtension on String {
+  String capitalize() {
+    return split(' ').map((word) =>
+    word.isNotEmpty
+        ? word[0].toUpperCase() + word.substring(1).toLowerCase()
+        : ''
+    ).join(' ');
+  }
+}
+
 class Calendario extends StatefulWidget {
   const Calendario({super.key});
 
@@ -27,7 +37,10 @@ class _CalendarioState extends State<Calendario> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-    _carregarAulasMarcadas();
+    // Load data immediately when the widget is created
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _carregarAulasMarcadas();
+    });
   }
 
   Future<void> _carregarAulasMarcadas() async {
@@ -137,6 +150,28 @@ class _CalendarioState extends State<Calendario> {
     } catch (e) {
       print('Erro na requisição de bloqueios: $e');
     }
+  }
+
+  Future<String> _getBlockedReason(DateTime data, int hora) async {
+    if (!_estaBloqueado(data, hora)) {
+      return 'Indisponível';
+    }
+
+    final chaveData = _gerarChaveDia(data);
+    final bloqueiosDoDia = _horariosBloqueados[chaveData];
+
+    if (bloqueiosDoDia == null) {
+      return 'Indisponível';
+    }
+
+    // Se for um bloqueio de dia inteiro
+    if (bloqueiosDoDia['fullDay'] == true) {
+      return bloqueiosDoDia['reason']?.toString().replaceAll('_', ' ').capitalize() ?? 'Indisponível';
+    }
+
+    // Se for um bloqueio por hora específica
+    final motivo = bloqueiosDoDia[hora.toString()];
+    return motivo?.toString().replaceAll('_', ' ').capitalize() ?? 'Indisponível';
   }
 
   bool _estaBloqueado(DateTime data, int hora) {
@@ -363,7 +398,27 @@ class _CalendarioState extends State<Calendario> {
                       trailing: Builder(
                         builder: (context) {
                           if (isHoraBloqueada) {
-                            return const Icon(Icons.lock_outline, color: Colors.orange);
+                            return FutureBuilder<String>(
+                              future: _getBlockedReason(dia, hora),
+                              builder: (context, snapshot) {
+                                final motivo = snapshot.data ?? 'Indisponível';
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.lock_outline, color: Colors.orange, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      motivo,
+                                      style: const TextStyle(
+                                        color: Colors.orange,
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
                           }
                           if (aulaId == null) return const SizedBox.shrink();
 
@@ -499,12 +554,12 @@ class _CalendarioState extends State<Calendario> {
   Widget _buildNavIcon({required IconData icon, required int index, required int currentIndex}) {
     final bool isSelected = index == currentIndex;
     return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.white24 : Colors.transparent,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon),
-    );
-  }
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white24 : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon),
+        );
+    }
 }

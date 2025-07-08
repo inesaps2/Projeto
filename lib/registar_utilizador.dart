@@ -69,7 +69,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
       print('Password: ${passwordAlunoController.text}');
       print('Categoria: $categoriaSelecionada');
       print('Instrutor: $instrutorSelecionado');
-      print('Veículo: $veiculoAlunoController');
+      print('Veículo: $veiculoSelecionado');
       print('id_type: 1');
 
       final response = await http.post(
