@@ -13,7 +13,7 @@ class EditarPerfil extends StatefulWidget {
 class _EditarPerfilState extends State<EditarPerfil> {
   List<Map<String, dynamic>> utilizadores = [];
   List<String> instructors = [];
-  final List<String> categories = ['A', 'B', 'C', 'D', 'E'];
+  final List<String> categorias = ['A', 'B', 'C', 'D', 'E'];
   final List<String> veiculos = ['Opel Corsa', 'Kia Rio', 'Kia Stonic', 'BMW'];
   bool carregando = true;
 
@@ -148,7 +148,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
                                         labelText: 'Categoria',
                                         border: OutlineInputBorder(),
                                       ),
-                                      items: categories.map<DropdownMenuItem<String>>((String value) {
+                                      items: categorias.map<DropdownMenuItem<String>>((String value) {
                                         return DropdownMenuItem<String>(
                                           value: value,
                                           child: Text(value),

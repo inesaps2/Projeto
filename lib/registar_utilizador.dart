@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:projeto/apagar_contas.dart';
 import 'package:projeto/main.dart';
 import 'package:projeto/pagina_inicial_web.dart';
 import 'package:projeto/perfil_web.dart';
@@ -169,6 +170,16 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
           children: [
             Image.asset('assets/GO_DRIVING Logotipo FINAL.png', height: 40),
             const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.delete),
+              tooltip: 'Apagar Contas',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ApagarContas()),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.edit),
               tooltip: 'Editar Perfil',
