@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const connection = require('../db');
+const connection = require('../db'); // ligação à base de dados MySQL
 
-<<<<<<< HEAD
 // ✅ Marcar aula (com verificação de conflito de horário)
 router.post('/aulas', async (req, res) => {
     const { email, nomeAluno, data, hora } = req.body;
@@ -13,18 +12,6 @@ router.post('/aulas', async (req, res) => {
 
     try {
       // 🔍 Obter aluno
-=======
-// Marcar aula (com verificação de conflito de horário)
-router.post('/aulas', async (req, res) => {
-    const { email, nomeAluno, data, hora } = req.body;
-  
-    if (!email || !nomeAluno || !data || !hora) {
-      return res.status(400).json({ error: 'Faltam dados obrigatórios.' });
-    }
-  
-    try {
-      // Obter aluno
->>>>>>> origin/master
       const [rowsAluno] = await connection.promise().query(
         'SELECT id, instructor FROM user WHERE email = ? AND id_type = 1',
         [email]
@@ -32,7 +19,6 @@ router.post('/aulas', async (req, res) => {
       if (rowsAluno.length === 0) {
         return res.status(404).json({ error: 'Aluno não encontrado ou não é aluno.' });
       }
-<<<<<<< HEAD
 
       const idStudent = rowsAluno[0].id;
       const nomeInstrutor = rowsAluno[0].instructor;
@@ -42,17 +28,6 @@ router.post('/aulas', async (req, res) => {
       }
 
       // 🔍 Obter ID do instrutor
-=======
-  
-      const idStudent = rowsAluno[0].id;
-      const nomeInstrutor = rowsAluno[0].instructor;
-  
-      if (!nomeInstrutor) {
-        return res.status(400).json({ error: 'Aluno não tem instrutor atribuído.' });
-      }
-  
-      // Obter ID do instrutor
->>>>>>> origin/master
       const [rowsInstrutor] = await connection.promise().query(
         'SELECT id FROM user WHERE name = ? AND id_type = 2',
         [nomeInstrutor]
@@ -60,7 +35,6 @@ router.post('/aulas', async (req, res) => {
       if (rowsInstrutor.length === 0) {
         return res.status(404).json({ error: 'Instrutor não encontrado.' });
       }
-<<<<<<< HEAD
 
       const idInstrutor = rowsInstrutor[0].id;
       const dateTime = `${data} ${hora}:00`;
@@ -79,26 +53,6 @@ router.post('/aulas', async (req, res) => {
         const reason = blockedPeriods[0].reason;
         let reasonMessage = 'O horário está bloqueado';
 
-=======
-  
-      const idInstrutor = rowsInstrutor[0].id;
-      const dateTime = `${data} ${hora}:00`;
-      const requestedDateTime = new Date(dateTime);
-  
-      // Verificar se o horário está dentro de um período bloqueado
-      const [blockedPeriods] = await connection.promise().query(
-        `SELECT * FROM blocked_schedules 
-         WHERE id_instructor = ? 
-         AND date_start <= ? 
-         AND date_end >= ?`,
-        [idInstrutor, dateTime, dateTime]
-      );
-  
-      if (blockedPeriods.length > 0) {
-        const reason = blockedPeriods[0].reason;
-        let reasonMessage = 'O horário está bloqueado';
-        
->>>>>>> origin/master
         // Adicionar mensagem mais descritiva com base no motivo
         switch(reason) {
           case 'ferias':
@@ -111,25 +65,15 @@ router.post('/aulas', async (req, res) => {
             reasonMessage = 'Este horário está indisponível.';
             break;
         }
-<<<<<<< HEAD
 
         return res.status(409).json({
-=======
-        
-        return res.status(409).json({ 
->>>>>>> origin/master
           error: reasonMessage,
           blocked: true,
           reason: reason
         });
       }
-<<<<<<< HEAD
 
       // 🚫 Verificar se o instrutor já tem aula nesse horário
-=======
-  
-      // Verificar se o instrutor já tem aula nesse horário
->>>>>>> origin/master
       const [aulaExistente] = await connection.promise().query(
         'SELECT id FROM classes WHERE id_instructor = ? AND time = ?',
         [idInstrutor, dateTime]
@@ -137,22 +81,13 @@ router.post('/aulas', async (req, res) => {
       if (aulaExistente.length > 0) {
         return res.status(409).json({ error: 'O instrutor já tem uma aula marcada nesse horário.' });
       }
-<<<<<<< HEAD
 
       // 🧾 Inserir aula
-=======
-  
-      // Inserir aula
->>>>>>> origin/master
       await connection.promise().query(
         'INSERT INTO classes (id_student, id_instructor, time, nome_aluno) VALUES (?, ?, ?, ?)',
         [idStudent, idInstrutor, dateTime, nomeAluno]
       );
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> origin/master
       res.status(201).json({
         message: 'Aula marcada com sucesso.',
         aula: {
@@ -161,7 +96,6 @@ router.post('/aulas', async (req, res) => {
           hora,
         }
       });
-<<<<<<< HEAD
 
     } catch (err) {
       console.error('❌ Erro ao marcar aula:', err);
@@ -169,21 +103,11 @@ router.post('/aulas', async (req, res) => {
       // Se for um erro de horário bloqueado, retornar a mensagem específica
       if (err.blocked) {
         return res.status(409).json({
-=======
-  
-    } catch (err) {
-      console.error('Erro ao marcar aula:', err);
-      
-      // Se for um erro de horário bloqueado, retornar a mensagem específica
-      if (err.blocked) {
-        return res.status(409).json({ 
->>>>>>> origin/master
           error: err.message || 'Este horário está bloqueado.',
           blocked: true,
           reason: err.reason
         });
       }
-<<<<<<< HEAD
 
       // Para erros de conflito (aula já existente)
       if (err.code === 'ER_DUP_ENTRY' || (err.message && err.message.includes('ER_DUP_ENTRY'))) {
@@ -194,29 +118,13 @@ router.post('/aulas', async (req, res) => {
 
       // Para outros erros, retornar mensagem genérica
       res.status(500).json({
-=======
-      
-      // Para erros de conflito (aula já existente)
-      if (err.code === 'ER_DUP_ENTRY' || (err.message && err.message.includes('ER_DUP_ENTRY'))) {
-        return res.status(409).json({ 
-          error: 'O instrutor já tem uma aula marcada nesse horário.'
-        });
-      }
-      
-      // Para outros erros, retornar mensagem genérica
-      res.status(500).json({ 
->>>>>>> origin/master
         error: 'Erro ao marcar aula. Por favor, tente novamente.'
      });
     }
 });
 
 
-<<<<<<< HEAD
 // ✅ Obter aulas do instrutor de um aluno ou por nome de instrutor (recepcionista)
-=======
-// Obter aulas do instrutor de um aluno ou por nome de instrutor (recepcionista)
->>>>>>> origin/master
 router.get('/aulas', async (req, res) => {
   const { email } = req.query;
 
@@ -270,11 +178,7 @@ router.get('/aulas', async (req, res) => {
 
     // 🔍 Buscar todas as aulas do instrutor
     const [rows] = await connection.promise().query(`
-<<<<<<< HEAD
       SELECT
-=======
-      SELECT 
->>>>>>> origin/master
         c.id,
         id_student,
         id_instructor,
@@ -288,11 +192,7 @@ router.get('/aulas', async (req, res) => {
     res.json(rows);
 
   } catch (error) {
-<<<<<<< HEAD
     console.error('❌ Erro ao obter aulas:', error);
-=======
-    console.error('Erro ao obter aulas:', error);
->>>>>>> origin/master
     res.status(500).json({ error: 'Erro ao obter aulas.' });
   }
 });
@@ -341,11 +241,7 @@ router.get('/aulas/recepcionista', async (req, res) => {
     }
 
     const [rows] = await connection.promise().query(`
-<<<<<<< HEAD
   SELECT
-=======
-  SELECT 
->>>>>>> origin/master
     c.id,
     c.id_student,
     c.id_instructor,
@@ -364,21 +260,13 @@ router.get('/aulas/recepcionista', async (req, res) => {
 res.json(rows);
 
   } catch (error) {
-<<<<<<< HEAD
     console.error('❌ Erro ao obter aulas:', error);
-=======
-    console.error('Erro ao obter aulas:', error);
->>>>>>> origin/master
     res.status(500).json({ error: 'Erro ao obter aulas.' });
   }
 });
 
 
-<<<<<<< HEAD
 // ✅ Verificar se um instrutor existe pelo nome
-=======
-// Verificar se um instrutor existe pelo nome
->>>>>>> origin/master
 router.get('/instrutores', async (req, res) => {
   const { nome } = req.query;
 
@@ -398,11 +286,7 @@ router.get('/instrutores', async (req, res) => {
       res.json(rows);  // Retorna todos os nomes
     }
   } catch (err) {
-<<<<<<< HEAD
     console.error('❌ Erro ao lidar com instrutores:', err);
-=======
-    console.error('Erro ao lidar com instrutores:', err);
->>>>>>> origin/master
     res.status(500).json({ error: 'Erro ao obter dados dos instrutores.' });
   }
 });
@@ -411,19 +295,11 @@ router.get('/instrutores', async (req, res) => {
 
 
 router.put('/classes/status', async (req, res) => {
-<<<<<<< HEAD
     console.log('📦 Corpo do pedido:', req.body);
     const { id_instructor, data, hora, novo_status } = req.body;
 
     if (!id_instructor || !data || !hora || !novo_status) {
         console.log('❌ Dados incompletos:', { id_instructor, data, hora, novo_status });
-=======
-    console.log('Corpo do pedido:', req.body);
-    const { id_instructor, data, hora, novo_status } = req.body;
-  
-    if (!id_instructor || !data || !hora || !novo_status) {
-        console.log('Dados incompletos:', { id_instructor, data, hora, novo_status });
->>>>>>> origin/master
         return res.status(400).json({ error: 'Dados incompletos.' });
     }
 
@@ -433,19 +309,13 @@ router.put('/classes/status', async (req, res) => {
         console.log('🕒 Data/hora formatada:', dateTime);
 
         const query = `
-<<<<<<< HEAD
             UPDATE classes
             SET class_status = ?
-=======
-            UPDATE classes 
-            SET class_status = ? 
->>>>>>> origin/master
             WHERE id_instructor = ? AND time = ?
         `;
         console.log('🔍 Query:', query, [novo_status, id_instructor, dateTime]);
 
         const [result] = await connection.promise().query(query, [
-<<<<<<< HEAD
             novo_status,
             id_instructor,
             dateTime
@@ -463,36 +333,12 @@ router.put('/classes/status', async (req, res) => {
                     hora,
                     dateTime,
                     novo_status
-=======
-            novo_status, 
-            id_instructor, 
-            dateTime
-        ]);
-
-        console.log('Resultado da query:', result);
-
-        if (result.affectedRows === 0) {
-            console.log('Nenhuma aula encontrada para atualizar');
-            return res.status(404).json({ 
-                error: 'Aula não encontrada para atualizar.',
-                debug: { 
-                    id_instructor, 
-                    data, 
-                    hora,
-                    dateTime,
-                    novo_status 
->>>>>>> origin/master
                 }
             });
         }
 
-<<<<<<< HEAD
         console.log('✅ Status atualizado com sucesso');
         res.status(200).json({
-=======
-        console.log('Status atualizado com sucesso');
-        res.status(200).json({ 
->>>>>>> origin/master
             success: true,
             message: 'Status atualizado com sucesso',
             data: {
@@ -503,17 +349,10 @@ router.put('/classes/status', async (req, res) => {
         });
 
     } catch (error) {
-<<<<<<< HEAD
         console.error('❌ Erro ao atualizar status:', error);
         res.status(500).json({
             error: 'Erro ao atualizar status da aula',
             details: error.message
-=======
-        console.error('Erro ao atualizar status:', error);
-        res.status(500).json({ 
-            error: 'Erro ao atualizar status da aula',
-            details: error.message 
->>>>>>> origin/master
       });
     }
 });
@@ -604,11 +443,7 @@ router.post('/bloquear-horario', async (req, res) => {
 });
 
 
-<<<<<<< HEAD
 // ✅ Obter horários bloqueados de um instrutor
-=======
-// Obter horários bloqueados de um instrutor
->>>>>>> origin/master
 router.get('/blocked-schedules', async (req, res) => {
   const { instructorId } = req.query;
   if (!instructorId) {
@@ -616,15 +451,9 @@ router.get('/blocked-schedules', async (req, res) => {
   }
   try {
     const [rows] = await connection.promise().query(
-<<<<<<< HEAD
       `SELECT id, id_instructor, date_start, date_end, reason
        FROM blocked_schedules
        WHERE id_instructor = ?
-=======
-      `SELECT id, id_instructor, date_start, date_end, reason 
-       FROM blocked_schedules 
-       WHERE id_instructor = ? 
->>>>>>> origin/master
        ORDER BY date_start ASC`,
       [instructorId]
     );
@@ -674,11 +503,7 @@ router.get('/aulas-bloqueadas', async (req, res) => {
 
     // Buscar todos os bloqueios do instrutor
     const [rows] = await connection.promise().query(`
-<<<<<<< HEAD
       SELECT
-=======
-      SELECT 
->>>>>>> origin/master
         NULL AS id,
         NULL AS id_student,
         id_instructor,
@@ -693,29 +518,17 @@ router.get('/aulas-bloqueadas', async (req, res) => {
     res.json(rows);
 
   } catch (error) {
-<<<<<<< HEAD
     console.error('❌ Erro ao obter bloqueios:', error);
-=======
-    console.error('Erro ao obter bloqueios:', error);
->>>>>>> origin/master
     res.status(500).json({ error: 'Erro ao obter bloqueios.' });
   }
 });
 
 
-<<<<<<< HEAD
 // ✅ Obter todos os utilizadores com id_type, name e email
 router.get('/utilizadores', async (req, res) => {
   try {
     const [rows] = await connection.promise().query(`
       SELECT
-=======
-// Obter todos os utilizadores com id_type, name e email
-router.get('/utilizadores', async (req, res) => {
-  try {
-    const [rows] = await connection.promise().query(`
-      SELECT 
->>>>>>> origin/master
         u.id,
         u.id_type,
         u.name,
@@ -758,8 +571,4 @@ router.put('/utilizadores/:email', async (req, res) => {
 });
 
 
-<<<<<<< HEAD
 module.exports = router;
-=======
-module.exports = router;
->>>>>>> origin/master
