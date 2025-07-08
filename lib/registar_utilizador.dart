@@ -20,12 +20,12 @@ class RegistarUtilizador extends StatefulWidget {
 class _RegistarUtilizadorState extends State<RegistarUtilizador> {
   bool showRegisterAlunoFields = false;
   bool showRegisterInstrutorFields = false;
-  bool showCalendar = false; // nova variável para o calendário
+  bool showCalendar = false;
 
   final _formKeyAluno = GlobalKey<FormState>();
   final _formKeyInstrutor = GlobalKey<FormState>();
 
-  // Aluno controllers
+  // Controladores para o formulário do aluno
   final TextEditingController nomeAlunoController = TextEditingController();
   final TextEditingController emailAlunoController = TextEditingController();
   final TextEditingController passwordAlunoController = TextEditingController();
@@ -37,7 +37,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
   String? veiculoSelecionado;
   List<String> instrutoresExistentes = [];
 
-  // Instrutor controllers
+  // Controladores para o formulário do instrutor
   final TextEditingController nomeInstrutorController = TextEditingController();
   final TextEditingController emailInstrutorController = TextEditingController();
   final TextEditingController passwordInstrutorController = TextEditingController();
@@ -64,7 +64,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
     if (_formKeyAluno.currentState!.validate()) {
       final url = Uri.parse('${Config.baseUrl}/api/auth/register');
 
-      print('--- A ENVIAR DADOS ---');
+      print('--- A ENVIAR DADOS ---'); // Debug: Log dos dados a enviar
       print('Nome: ${nomeAlunoController.text}');
       print('Email: ${emailAlunoController.text}');
       print('Password: ${passwordAlunoController.text}');
@@ -83,11 +83,11 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
           'category': categoriaSelecionada,
           'instructor': instrutorSelecionado,
           'associated_car': veiculoSelecionado,
-          'id_type': 1, // id_type fixo para aluno
+          'id_type': 1, // Valor fixo para identificar aluno
         }),
       );
 
-      print('--- RESPOSTA DO SERVIDOR ---');
+      print('--- RESPOSTA DO SERVIDOR ---'); // Debug: Log da resposta do servidor
       print('Status code: ${response.statusCode}');
       print('Body: ${response.body}');
 
@@ -108,7 +108,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
     if (_formKeyInstrutor.currentState!.validate()) {
       final url = Uri.parse('${Config.baseUrl}/api/auth/register');
 
-      print('--- A ENVIAR DADOS (Instrutor) ---');
+      print('--- A ENVIAR DADOS (Instrutor) ---'); // Debug: Log dos dados do instrutor
       print('Nome: ${nomeInstrutorController.text}');
       print('Email: ${emailInstrutorController.text}');
       print('Password: default123');
@@ -125,7 +125,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
         }),
       );
 
-      print('--- RESPOSTA DO SERVIDOR ---');
+      print('--- RESPOSTA DO SERVIDOR ---'); // Debug: Log da resposta do servidor
       print('Status code: ${response.statusCode}');
       print('Body: ${response.body}');
 
@@ -225,7 +225,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
               ),
               const SizedBox(height: 24),
 
-              // Botões
+              // Área dos botões principais
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -318,7 +318,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                   ],
                 ),
 
-              // Formulário Aluno
+              // Formulário de Registo do Aluno
               if (showRegisterAlunoFields)
                 Form(
                   key: _formKeyAluno,
@@ -485,7 +485,7 @@ class _RegistarUtilizadorState extends State<RegistarUtilizador> {
                   ),
                 ),
 
-              // Formulário Instrutor
+              // Formulário do Instrutor
               if (showRegisterInstrutorFields)
                 Form(
                   key: _formKeyInstrutor,
