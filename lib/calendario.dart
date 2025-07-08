@@ -29,7 +29,7 @@ class _CalendarioState extends State<Calendario> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   Map<DateTime, Map<int, Map<String, dynamic>>> _eventos = {};
-  // === Horários bloqueados do instrutor ===
+  // Horários bloqueados do instrutor
   final Map<String, Map<String, dynamic>> _horariosBloqueados = {};
   int? _idInstrutor;
 
@@ -37,7 +37,6 @@ class _CalendarioState extends State<Calendario> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-    // Load data immediately when the widget is created
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _carregarAulasMarcadas();
     });
@@ -87,7 +86,7 @@ class _CalendarioState extends State<Calendario> {
     }
   }
 
-  // ================= BLOQUEIOS =================
+  // Bloqueios
 
   String _gerarChaveDia(DateTime d) {
     return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
