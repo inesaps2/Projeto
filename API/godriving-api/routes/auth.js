@@ -3,32 +3,30 @@ const router = express.Router();
 const connection = require('../db'); // Conexão com o banco de dados MySQL
 const bcrypt = require('bcrypt'); // Biblioteca para encriptação de senhas
 
-// ===============================
-// 🧾 ROTA: Registo de utilizador
-// ===============================
+// Registo de utilizador
 router.post('/register', (req, res) => {
   const { name, id_type, email, password, category, instructor, associated_car } = req.body;
 
-  console.log('📥 Pedido recebido em /register');
+  console.log('Pedido recebido em /register');
   console.log('Dados recebidos:', req.body);
 
   // Verificar se já existe um utilizador com este email
   connection.query('SELECT * FROM user WHERE email = ?', [email], (err, results) => {
     if (err) {
-      console.error('❌ Erro na verificação de email:', err);
+      console.error('Erro na verificação de email:', err);
       return res.status(500).json({ error: 'Erro no banco' });
     }
 
     if (results.length > 0) {
-      console.log('⚠ Email já registrado');
-      return res.status(400).json({ error: 'Email já registrado' });
+      console.log('Email já registado');
+      return res.status(400).json({ error: 'Email já registado' });
     }
 
     // Função assíncrona autoexecutável para registar o utilizador
     (async () => {
       try {
         const hashedPassword = await bcrypt.hash(password, 10); // Encripta a password
-        console.log('🔒 Password encriptada:', hashedPassword);
+        console.log('Password encriptada:', hashedPassword);
 
         // Inserção na base de dados
         connection.query(
@@ -45,25 +43,23 @@ router.post('/register', (req, res) => {
           ],
           (err, results) => {
             if (err) {
-              console.error('❌ Erro no INSERT:', err);
-              return res.status(500).json({ error: 'Erro ao criar usuário' });
+              console.error('Erro no INSERT:', err);
+              return res.status(500).json({ error: 'Erro ao criar utilizador' });
             }
 
-            console.log('✅ Usuário criado com sucesso');
-            res.status(201).json({ message: 'Usuário criado com sucesso!' });
+            console.log('Utilizador criado com sucesso');
+            res.status(201).json({ message: 'Utilizador criado com sucesso!' });
           }
         );
       } catch (err) {
-        console.error('❌ Erro ao hashear password:', err);
+        console.error('Erro ao hashear password:', err);
         res.status(500).json({ error: 'Erro ao processar o registo' });
       }
     })();
   });
 });
 
-// ====================
-// 🔐 Login do utilizador
-// ====================
+// Login do utilizador
 router.post('/login', (req, res) => {
   console.log('Dados recebidos:', req.body);
   const { email, password } = req.body;
@@ -116,12 +112,10 @@ router.post('/login', (req, res) => {
   });
 });
 
-// ========================================
-// 🔐 Alterar password do utilizador
-// ========================================
+// Alterar password do utilizador
 router.put('/alterar_password', async (req, res) => {
-  console.log('📡 [PUT] /api/auth/alterar_password');
-  console.log('📦 Corpo do pedido:', req.body);
+  console.log('[PUT] /api/auth/alterar_password');
+  console.log('Corpo do pedido:', req.body);
 
   const { email, antiga_password, nova_password } = req.body;
 
@@ -149,9 +143,7 @@ router.put('/alterar_password', async (req, res) => {
   });
 });
 
-// ============================================
-// 🗑 Apagar utilizador (recepcionista/admin)
-// ============================================
+// Apagar utilizador (recepcionista/admin)
 router.delete('/utilizadores/:email', async (req, res) => {
   const { email } = req.params;
 
@@ -160,7 +152,7 @@ router.delete('/utilizadores/:email', async (req, res) => {
   }
 
   try {
-    // 1. Busca o utilizador
+    // Procura o utilizador
     const [rows] = await connection.promise().query(
       'SELECT id, id_type FROM user WHERE email = ?',
       [email]
@@ -173,19 +165,19 @@ router.delete('/utilizadores/:email', async (req, res) => {
     const userId = rows[0].id;
     const userType = rows[0].id_type;
 
-    // 2. Apaga aulas associadas (se for aluno ou instrutor)
+    // Apaga aulas associadas (se for aluno ou instrutor)
     await connection.promise().query(
       'DELETE FROM classes WHERE id_instructor = ? OR id_student = ?',
       [userId, userId]
     );
 
-    // 3. Apaga horários bloqueados (se for instrutor)
+    // Apaga horários bloqueados (se for instrutor)
     await connection.promise().query(
       'DELETE FROM blocked_schedules WHERE id_instructor = ?',
       [userId]
     );
 
-    // 4. Apaga o utilizador
+    // Apaga o utilizador
     const [result] = await connection.promise().query(
       'DELETE FROM user WHERE id = ?',
       [userId]
@@ -195,7 +187,7 @@ router.delete('/utilizadores/:email', async (req, res) => {
       return res.status(404).json({ error: 'Utilizador não encontrado ao apagar.' });
     }
 
-    // 5. Sucesso
+    // Sucesso
     res.status(200).json({ message: 'Utilizador e dados relacionados apagados com sucesso.' });
   } catch (err) {
     console.error('Erro ao apagar utilizador:', err);
