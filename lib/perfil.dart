@@ -277,7 +277,7 @@ class _AlterarPasswordDialogState extends State<AlterarPasswordDialog> {
         Session.firstlogin = 0;
       });
 
-      // Fecha o diálogo sinalizando sucesso
+      // Fecha o diálogo sinalizando como sucesso
       Navigator.pop(context, true);
     } else {
       setState(() => mensagem = 'Erro ao alterar password.');
