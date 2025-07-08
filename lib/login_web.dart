@@ -50,7 +50,7 @@ class _LoginWebState extends State<LoginWeb> {
         _mostrarMensagem('Credenciais inválidas.');
       }
     } catch (e) {
-      _mostrarMensagem('Erro ao conectar. Verifique sua rede ou servidor.');
+      _mostrarMensagem('Erro ao conectar. Verifique a sua rede ou o servidor.');
     }
   }
 
