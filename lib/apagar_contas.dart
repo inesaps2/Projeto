@@ -49,7 +49,7 @@ class _ApagarContasState extends State<ApagarContas> {
           carregando = false;
         });
       } else {
-        throw Exception('Erro ao buscar utilizadores');
+        throw Exception('Erro ao procurar utilizadores');
       }
     } catch (e) {
       print('Erro: $e');
